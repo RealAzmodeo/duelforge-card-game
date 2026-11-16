@@ -612,10 +612,10 @@ const FACTIONS = {
 };
 
 const FACTION_HEROES = {
-  forja: { id: "kaelen", name: "Kaelen, Senor del Yunque", hp: 32, frame: "assets/ui/portrait_frame_iron.png", passive: "+2 SHD al inicio de cada turno" },
-  arcano: { id: "lyra", name: "Lyra, Archimaga Astral", hp: 28, frame: "assets/ui/portrait_frame_crystal.png", passive: "Robas +1 carta extra en turno 1" },
+  forja: { id: "kaelen", name: "Kaelen, Senor del Yunque", hp: 30, frame: "assets/ui/portrait_frame_iron.png", passive: "+1 SHD al inicio de cada turno" },
+  arcano: { id: "lyra", name: "Lyra, Archimaga Astral", hp: 31, frame: "assets/ui/portrait_frame_crystal.png", passive: "Robas +1 carta extra en turno 1" },
   sindicato: { id: "vex", name: "Vex, Baron del Mercado", hp: 30, frame: "assets/ui/portrait_frame_gold.png", passive: "Empiezas cada combate con +2 Oro" },
-  legion: { id: "ignis", name: "Ignis, General Carmesi", hp: 28, frame: "assets/ui/portrait_frame_obsidian.png", passive: "Tus unidades con [PRISA] ganan +1 ATK" },
+  legion: { id: "ignis", name: "Ignis, General Carmesi", hp: 29, frame: "assets/ui/portrait_frame_obsidian.png", passive: "Tus unidades con [PRISA] ganan +1 ATK" },
   culto: { id: "moros", name: "Moros, Profeta Sombrio", hp: 30, frame: "assets/ui/portrait_frame_obsidian.png", passive: "Curas +2 HP cuando muere una unidad tuya" }
 };
 
@@ -645,25 +645,25 @@ const STARTER_DECKS = {
     id: "arcano",
     name: "Orden Arcana",
     archetype: "Control y Robo",
-    cards: ["golpe", "golpe", "golpe", "escudo", "escudo", "descarga", "descarga", "hielo", "moneda", "moneda"]
+    cards: ["golpe", "golpe", "descarga", "descarga", "rayo", "hielo", "escudo", "escudo", "moneda", "moneda"]
   },
   sindicato: {
     id: "sindicato",
     name: "Sindicato del Oro",
     archetype: "Economia y Mercado",
-    cards: ["moneda", "moneda", "moneda", "mercenario", "mercenario", "saqueador", "saqueador", "golpe", "escudo", "escudo"]
+    cards: ["moneda", "moneda", "mercenario", "mercenario", "saqueador", "saqueador", "golpe", "golpe", "relampago", "escudo"]
   },
   legion: {
     id: "legion",
     name: "Legion Ignea",
     archetype: "Aggro y Prisa",
-    cards: ["golpe", "golpe", "golpe", "golpe", "goblin", "goblin", "furia", "escudo", "escudo", "moneda"]
+    cards: ["golpe", "golpe", "golpe", "goblin", "goblin", "legion_lancero", "furia", "escudo", "escudo", "moneda"]
   },
   culto: {
     id: "culto",
     name: "Culto Sombrio",
     archetype: "Drenaje y Sacrificio",
-    cards: ["golpe", "golpe", "drenaje", "drenaje", "mercenario", "mercenario", "saqueador", "escudo", "escudo", "moneda"]
+    cards: ["golpe", "golpe", "golpe", "drenaje", "mercenario", "mercenario", "saqueador", "escudo", "escudo", "moneda"]
   }
 };
 
@@ -1106,7 +1106,7 @@ function startStageWithConfig(stage, tierIdx = 0) {
     player: {
       hp: runState.playerHp,
       maxHp: runState.playerMaxHp,
-      armor: runState.faction === "forja" ? 2 : 0,
+      armor: runState.faction === "forja" ? 1 : 0,
       energy: 3,
       maxEnergy: 3,
       gold: (runState.nextStageBonusGold || 0) + (runState.faction === "sindicato" ? 2 : 0),
@@ -1145,6 +1145,7 @@ function startStageWithConfig(stage, tierIdx = 0) {
   drawCards(runState.faction === "arcano" ? 6 : 5);
   document.getElementById("game-over-modal").classList.add("hidden");
   document.getElementById("booster-modal").classList.add("hidden");
+  clearCombatFinisherEffects();
   render();
   startTurnTimer();
   if (runState.inCombat) {
@@ -1204,6 +1205,53 @@ function dealDamageToHero(target, amount) {
   checkGameOver();
 }
 
+function clearCombatFinisherEffects() {
+  document.querySelector(".main-stage")?.classList.remove("finisher-victory", "finisher-defeat");
+  document.getElementById("enemy-hero-panel")?.classList.remove("enemy-shatter");
+  document.querySelector(".enemy-side")?.classList.remove("enemy-shatter");
+  document.getElementById("player-hero-panel")?.classList.remove("player-shatter");
+  document.querySelector(".player-side")?.classList.remove("player-shatter");
+  document.getElementById("finisher-banner")?.classList.add("hidden");
+}
+
+function playCombatFinisher(isVictory, headline, subline, onComplete) {
+  stopTurnTimer();
+  render();
+  clearCombatFinisherEffects();
+
+  const stageEl = document.querySelector(".main-stage");
+  const banner = document.getElementById("finisher-banner");
+  const titleEl = document.getElementById("finisher-title");
+  const subEl = document.getElementById("finisher-sub");
+
+  stageEl?.classList.add(isVictory ? "finisher-victory" : "finisher-defeat");
+  triggerShake(".main-stage");
+  window.SFX?.play(isVictory ? "victory_chime" : "defeat_tone");
+
+  if (isVictory) {
+    document.getElementById("enemy-hero-panel")?.classList.add("enemy-shatter");
+    document.querySelector(".enemy-side")?.classList.add("enemy-shatter");
+    spawnFx("#enemy-hero-panel", "DESTRUIDO!", "fx-dmg");
+  } else {
+    document.getElementById("player-hero-panel")?.classList.add("player-shatter");
+    document.querySelector(".player-side")?.classList.add("player-shatter");
+    spawnFx("#player-hero-panel", "DERROTADO!", "fx-dmg");
+  }
+
+  if (banner && titleEl && subEl) {
+    banner.classList.toggle("is-victory", isVictory);
+    banner.classList.toggle("is-defeat", !isVictory);
+    titleEl.textContent = headline;
+    subEl.textContent = subline || "";
+    banner.classList.remove("hidden");
+  }
+
+  setTimeout(() => {
+    clearCombatFinisherEffects();
+    if (typeof onComplete === "function") onComplete();
+  }, 1650);
+}
+
 function checkGameOver() {
   if (state.gameOver) return;
   if (state.isPvp) {
@@ -1216,7 +1264,7 @@ function checkGameOver() {
   if (state.enemy.hp <= 0) {
     state.gameOver = true;
     runState.inCombat = false;
-    runState.playerHp = state.player.hp;
+    runState.playerHp = Math.min(runState.playerMaxHp, state.player.hp + 5);
     const enc = runState.currentEncounter;
     if (enc && enc.goldReward) {
       runState.runGold = (runState.runGold || 0) + enc.goldReward;
@@ -1227,16 +1275,25 @@ function checkGameOver() {
       Boolean(enc?.isElite),
       isBossWin
     );
-    if (isBossWin) {
-      showModal("CAMPEON DE LA RUN", "Has derrotado a todos los rivales y al Senor Titan.", true);
-    } else {
-      openBoosterModal(false);
-    }
+    const headline = isBossWin
+      ? "JEFE DESTRUIDO!"
+      : (enc?.isElite ? "ELITE ABATIDO!" : "ENEMIGO DERROTADO!");
+    const subline = enc?.goldReward ? `+${enc.goldReward} ORO DE RUN` : "VICTORIA EN COMBATE";
+
+    playCombatFinisher(true, headline, subline, () => {
+      if (isBossWin) {
+        showModal("CAMPEON DE LA RUN", "Has derrotado a todos los rivales y al Senor Titan.", true);
+      } else {
+        openBoosterModal(false);
+      }
+    });
   } else if (state.player.hp <= 0) {
     state.gameOver = true;
     runState.inCombat = false;
     const floorNum = runState.mapNav ? runState.mapNav.currentFloor : (runState.stageIndex + 1);
-    showModal("DERROTA", `Has caido en el Piso ${floorNum}. Intentalo de nuevo.`, false);
+    playCombatFinisher(false, "HAS CAIDO EN COMBATE", `Piso ${floorNum} - Tu heroe fue derrotado`, () => {
+      showModal("DERROTA", `Has caido en el Piso ${floorNum}. Intentalo de nuevo.`, false);
+    });
   }
 }
 
@@ -2013,6 +2070,7 @@ function openReactionWindow(enemyCardMeta, onResolve) {
 
 function executeEnemyTurn() {
   if (state.gameOver) return;
+  state.enemy.armor = 0;
 
   const readyAttackers = [];
   state.enemy.board.forEach((u, idx) => {
@@ -2125,11 +2183,12 @@ function finishEnemyTurn() {
 
   state.turn += 1;
   state.isPlayerTurn = true;
+  state.player.armor = 0;
   state.player.energy = state.player.maxEnergy;
 
   if (runState.faction === "forja") {
-    state.player.armor += 2;
-    spawnFx("#player-hero-panel", "+2 SHD", "fx-shd");
+    state.player.armor += 1;
+    spawnFx("#player-hero-panel", "+1 SHD", "fx-shd");
   }
 
   // Trigger active Relics at start of player turn and decrement duration

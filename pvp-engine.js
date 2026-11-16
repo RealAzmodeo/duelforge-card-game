@@ -416,6 +416,8 @@
   function withHostActorContext(actorSide, fn) {
     const otherSide = actorSide === "p1" ? "p2" : "p1";
     const savedState = state;
+    const savedFaction = runState.faction;
+    runState.faction = pvpMatch[actorSide].factionId;
     const fxQueue = [];
     state = {
       isPvp: true,
@@ -443,6 +445,7 @@
         pvpMatch.winnerSide = actorSide;
       }
       state = savedState;
+      runState.faction = savedFaction;
     }
     return fxQueue;
   }
@@ -718,7 +721,10 @@
       if (otherSide === "p1") pvpMatch.turn += 1;
 
       const nextPlayer = pvpMatch[otherSide];
-      nextPlayer.energy = nextPlayer.maxEnergy;
+      nextPlayer.armor = nextPlayer.factionId === "forja" ? 1 : 0;
+      nextPlayer.energy = (pvpMatch.turn === 1 && otherSide === "p2")
+        ? nextPlayer.maxEnergy + 1
+        : nextPlayer.maxEnergy;
 
       nextPlayer.board.forEach((u, idx) => {
         if (!u) return;
@@ -758,9 +764,13 @@
       marketRow.push(marketPool.pop());
     }
 
-    drawForSide(p1, 5);
-    drawForSide(p2, 5);
-    p2.gold = 1;
+    p1.armor = p1.factionId === "forja" ? 1 : 0;
+    p1.gold = p1.factionId === "sindicato" ? 2 : 0;
+    p2.armor = 3 + (p2.factionId === "forja" ? 1 : 0);
+    p2.gold = 2 + (p2.factionId === "sindicato" ? 2 : 0);
+
+    drawForSide(p1, p1.factionId === "arcano" ? 6 : 5);
+    drawForSide(p2, (p2.factionId === "arcano" ? 6 : 5) + 1);
 
     pvpMatch = {
       turn: 1,
