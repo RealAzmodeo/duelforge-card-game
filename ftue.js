@@ -78,6 +78,7 @@
     return {
       overlay: document.getElementById("ftue-overlay"),
       spotlight: document.getElementById("ftue-spotlight"),
+      pointer: document.getElementById("ftue-pointer"),
       popover: document.getElementById("ftue-popover"),
       badge: document.getElementById("ftue-badge"),
       text: document.getElementById("ftue-text"),
@@ -101,12 +102,14 @@
     if (!els.overlay || els.overlay.classList.contains("hidden")) return;
 
     const target = resolveTarget(activeStep.target);
+    els.popover.style.left = "";
+    els.popover.style.top = "";
+    els.popover.style.transform = "";
+
     if (!target || target.offsetParent === null) {
-      // Target hidden or removed; hide softly without breaking flow
       els.spotlight.style.opacity = "0";
-      els.popover.style.left = "50%";
-      els.popover.style.top = "18px";
-      els.popover.style.transform = "translateX(-50%)";
+      els.pointer?.classList.add("hidden");
+      els.popover.classList.remove("dock-right");
       return;
     }
 
@@ -123,35 +126,30 @@
     els.spotlight.style.width = `${sWidth}px`;
     els.spotlight.style.height = `${sHeight}px`;
 
-    // Position popover near target without overflowing viewport
-    els.popover.style.transform = "none";
-    const popRect = els.popover.getBoundingClientRect();
-    const popW = popRect.width || 310;
-    const popH = popRect.height || 110;
-    const margin = 14;
+    // Always keep mentor anchored at bottom-left
+    els.popover.classList.remove("dock-right");
 
-    let left = rect.left + rect.width / 2 - popW / 2;
-    let top = rect.top - popH - margin;
-
-    if (activeStep.prefer === "bottom" || top < 12) {
-      top = rect.bottom + margin;
+    // Position animated arrow pointing directly at the highlighted element
+    if (els.pointer) {
+      els.pointer.classList.remove("hidden", "dir-down", "dir-up", "dir-left", "dir-right");
+      if (sTop > 64) {
+        els.pointer.classList.add("dir-down");
+        els.pointer.style.left = `${Math.round(sLeft + sWidth / 2)}px`;
+        els.pointer.style.top = `${Math.round(sTop - 52)}px`;
+      } else if (sTop + sHeight + 64 < window.innerHeight) {
+        els.pointer.classList.add("dir-up");
+        els.pointer.style.left = `${Math.round(sLeft + sWidth / 2)}px`;
+        els.pointer.style.top = `${Math.round(sTop + sHeight + 8)}px`;
+      } else if (sLeft > 64) {
+        els.pointer.classList.add("dir-left");
+        els.pointer.style.left = `${Math.round(sLeft - 52)}px`;
+        els.pointer.style.top = `${Math.round(sTop + sHeight / 2)}px`;
+      } else {
+        els.pointer.classList.add("dir-right");
+        els.pointer.style.left = `${Math.round(sLeft + sWidth + 8)}px`;
+        els.pointer.style.top = `${Math.round(sTop + sHeight / 2)}px`;
+      }
     }
-    if (activeStep.prefer === "left" || (top + popH > window.innerHeight - 12 && rect.left - popW - margin > 12)) {
-      left = rect.left - popW - margin;
-      top = Math.max(12, Math.min(window.innerHeight - popH - 12, rect.top + rect.height / 2 - popH / 2));
-    } else if (activeStep.prefer === "right" && rect.right + popW + margin < window.innerWidth - 12) {
-      left = rect.right + margin;
-      top = Math.max(12, Math.min(window.innerHeight - popH - 12, rect.top + rect.height / 2 - popH / 2));
-    }
-
-    if (top + popH > window.innerHeight - 12) {
-      top = Math.max(12, rect.top - popH - margin);
-    }
-    left = Math.max(12, Math.min(window.innerWidth - popW - 12, left));
-    top = Math.max(12, Math.min(window.innerHeight - popH - 12, top));
-
-    els.popover.style.left = `${left}px`;
-    els.popover.style.top = `${top}px`;
   }
 
   function showStep(stepConfig) {
@@ -320,6 +318,12 @@
 
     onCombatTurnStart(state) {
       if (!isEnabled() || !state || state.isPvp) return;
+      const isOverlayOpen = () =>
+        !document.getElementById("booster-modal")?.classList.contains("hidden") ||
+        !document.getElementById("map-screen")?.classList.contains("hidden") ||
+        !document.getElementById("rest-screen")?.classList.contains("hidden") ||
+        !document.getElementById("title-screen")?.classList.contains("hidden");
+      if (isOverlayOpen()) return;
       if (activeStep?.key === "mapIntro" || activeStep?.key === "combatEndTurn") {
         dismissCurrent();
       }
@@ -328,6 +332,7 @@
       const readyIdx = state.player.board.findIndex((u) => u && u.ready);
       if (readyIdx !== -1 && !hasSeen("combatAttack")) {
         setTimeout(() => {
+          if (isOverlayOpen()) return;
           const slotEl = document.querySelector(`#player-slots .unit-slot:nth-child(${readyIdx + 1})`);
           if (!slotEl) return;
           showStep({
@@ -345,6 +350,7 @@
       // Priority 2: First turn hand + energy
       if (!hasSeen("combatHand")) {
         setTimeout(() => {
+          if (isOverlayOpen()) return;
           showStep({
             key: "combatHand",
             badge: "COMBATE 1/3",

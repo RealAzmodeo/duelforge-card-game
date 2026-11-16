@@ -774,7 +774,7 @@ function renderDeckSelector() {
       <div class="deck-pillar-bottom">
         <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
         <span class="deck-choice-name">${deck.name}</span>
-        <div class="deck-hero-ribbon" style="background-image: url('assets/ui/ribbon_${deck.id}.png')"><span>${h.name}</span></div>
+        <div class="deck-hero-ribbon" style="--ribbon-url: url('assets/ui/ribbon_${deck.id}.png')"><span>${h.name}</span></div>
         <span class="deck-choice-desc">${h.passive}</span>
       </div>
       <div class="deck-hover-drawer">
@@ -1141,6 +1141,10 @@ function startStageWithConfig(stage, tierIdx = 0) {
   document.getElementById("booster-modal").classList.add("hidden");
   render();
   startTurnTimer();
+  if (runState.inCombat) {
+    window.FTUE?.onCombatTurnStart(state);
+    window.FTUE?.onCardDrawnOrHandCheck(state);
+  }
   setTimeout(() => showSpeechBubble("enemy", "rage", `Preparate para caer!`), 450);
   if (autoBattleEnabled) setTimeout(runAutoBattleTurn, 420);
 }
@@ -1308,7 +1312,7 @@ function buildCardStatIcons(card) {
 function createVisualCardEl(card, { mini = false, showNote = false } = {}) {
   const { iconsHtml, complexNote } = buildCardStatIcons(card);
   const el = document.createElement("div");
-  el.className = `hand-card type-${card.type} rarity-${card.rarity || "comun"} ${card.ephemeral ? "ephemeral" : ""} ${mini ? "mini-deck-card" : ""}`;
+  el.className = `hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"} ${card.ephemeral ? "ephemeral" : ""} ${mini ? "mini-deck-card" : ""}`;
   el.title = card.desc;
   el.innerHTML = `
     <div class="card-type-crest" title="Tipo: ${card.type}"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
@@ -1387,6 +1391,7 @@ function openBoosterModal(isInitial = false) {
     setTimeout(() => revealBoosterCards(tier, isInitial, tierKey), 460);
   };
   document.getElementById("booster-modal").classList.remove("hidden");
+  window.FTUE?.onBoosterOpen(isInitial);
 }
 
 function buildCardBadges(card) {
@@ -1467,7 +1472,7 @@ function revealBoosterCards(tier, isInitial = false, tierKey = "basico") {
     wrap.className = "booster-pick-wrap";
     wrap.style.animationDelay = `${idx * 140}ms`;
     wrap.innerHTML = `
-      <div class="hand-card type-${card.type} rarity-${card.rarity || "comun"}" title="${card.desc}">
+      <div class="hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"}" title="${card.desc}">
         <div class="card-type-crest" title="Tipo: ${card.type}"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
         ${buildCardBadges(card)}
         <div class="card-banner card-banner-cost-only">
@@ -1485,6 +1490,7 @@ function revealBoosterCards(tier, isInitial = false, tierKey = "basico") {
     wrap.addEventListener("click", () => pickBoosterCard(id, isInitial));
     choicesEl.appendChild(wrap);
   });
+  window.FTUE?.onBoosterRevealed(isInitial);
 }
 
 function pickBoosterCard(cardId, isInitial = false) {
@@ -1630,6 +1636,7 @@ function playCard(handIndex) {
   state.selectedUnitIndex = null;
   state.pendingEquip = null;
   render();
+  window.FTUE?.onCardPlayed(card, state);
 }
 
 function buyMarketCard(marketIndex) {
@@ -1653,6 +1660,7 @@ function buyMarketCard(marketIndex) {
   refillMarketSlot(marketIndex);
   setHint(`Compraste ${card.name} (Temporal). Se anadio directo a tu mano.`);
   render();
+  window.FTUE?.onMarketBought(state);
 }
 
 function selectPlayerUnit(slotIndex) {
@@ -1723,6 +1731,7 @@ function attackEnemyUnit(enemySlotIndex) {
   if (!attacker || !defender) return;
 
   state.selectedUnitIndex = null;
+  window.FTUE?.onUnitAttacked();
   const attackerSel = `#player-slots .unit-slot:nth-child(${attackerIdx + 1}) .unit-token`;
   const defenderSel = `#enemy-slots .unit-slot:nth-child(${enemySlotIndex + 1})`;
 
@@ -1766,11 +1775,13 @@ function attackEnemyHero() {
     setHint("Una unidad rival con [GUARDIA] bloquea el ataque directo al Heroe.");
     return;
   }
+  window.FTUE?.onUnitAttacked();
 
   const attackerIdx = state.selectedUnitIndex;
   if (!attacker) return;
 
   state.selectedUnitIndex = null;
+  window.FTUE?.onUnitAttacked();
   const attackerSel = `#player-slots .unit-slot:nth-child(${attackerIdx + 1}) .unit-token`;
 
   animateUnitLunge(attackerSel, "#enemy-hero-panel", () => {
@@ -1823,6 +1834,7 @@ function endTurn() {
     return;
   }
   stopTurnTimer();
+  window.FTUE?.onTurnEnd();
   state.isPlayerTurn = false;
   state.selectedUnitIndex = null;
   render();
@@ -1850,21 +1862,23 @@ function openReactionWindow(enemyCardMeta, onResolve) {
   };
 
   cardSlot.innerHTML = `
-    <div class="hand-card type-Hechizo">
-      <div class="card-banner">
-        <span class="card-title">${enemyCardMeta.name}</span>
+    <div class="hand-card type-Hechizo faction-neutral rarity-rara">
+      <div class="card-type-crest" title="Tipo: Hechizo"><img src="${getCardTypeIcon("Hechizo")}" alt="Hechizo" /></div>
+      <div class="card-banner card-banner-cost-only">
         <span class="energy-cost"><span>${enemyCardMeta.dmg}</span></span>
       </div>
       <div class="card-art-wrap">
         <img src="${enemyCardMeta.art}" alt="${enemyCardMeta.name}" />
       </div>
-      <div class="card-footer-badge">DMG ${enemyCardMeta.dmg}</div>
+      <div class="card-stat-icons"><span class="stat-ic"><img src="assets/ui/stat_atk.png" alt="DMG" /><b>${enemyCardMeta.dmg}</b></span></div>
+      <div class="card-name-ribbon ribbon-rara"><span>${enemyCardMeta.name}</span></div>
     </div>
   `;
 
   textEl.textContent = `${state.enemy.name} juega ${enemyCardMeta.name} (${enemyCardMeta.dmg} DMG). Elige bloqueador o responde con [REACCION].`;
   banner.classList.remove("hidden");
   render();
+  window.FTUE?.onReactionOpen();
 
   const finish = () => {
     if (reactionInterval) {
@@ -1874,6 +1888,7 @@ function openReactionWindow(enemyCardMeta, onResolve) {
     banner.classList.add("hidden");
     const chosenBlocker = state.reactionWindow ? state.reactionWindow.blockerIdx : null;
     state.reactionWindow = null;
+    window.FTUE?.onReactionResolved();
     onResolve(chosenBlocker);
   };
 
@@ -1886,6 +1901,7 @@ function openReactionWindow(enemyCardMeta, onResolve) {
       finish();
       return;
     }
+    if (window.FTUE?.isReactionPaused()) return;
     state.reactionWindow.timeLeft = Math.max(0, state.reactionWindow.timeLeft - 0.1);
     const pct = (state.reactionWindow.timeLeft / 5.0) * 100;
     fillEl.style.width = `${pct}%`;
@@ -2055,6 +2071,8 @@ function finishEnemyTurn() {
   setHint("Tu turno: juega cartas, compra del Mercado Vivo o ataca.");
   render();
   startTurnTimer();
+  window.FTUE?.onCombatTurnStart(state);
+  window.FTUE?.onCardDrawnOrHandCheck(state);
   if (autoBattleEnabled) setTimeout(runAutoBattleTurn, 380);
 }
 
@@ -2292,7 +2310,7 @@ function render() {
       state.player.energy >= card.cost &&
       (state.isPlayerTurn || (inReaction && card.reaction));
     const el = document.createElement("div");
-    el.className = `hand-card type-${card.type} rarity-${card.rarity || "comun"} ${playable ? "" : "unplayable"} ${inReaction && playable ? "reaction-ready" : ""} ${card.ephemeral ? "ephemeral" : ""} ${card.justDrawn ? "deal-in" : ""}`;
+    el.className = `hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"} ${playable ? "" : "unplayable"} ${inReaction && playable ? "reaction-ready" : ""} ${card.ephemeral ? "ephemeral" : ""} ${card.justDrawn ? "deal-in" : ""}`;
     if (card.justDrawn) {
       el.style.animationDelay = `${idx * 45}ms`;
       card.justDrawn = false;
@@ -2390,6 +2408,7 @@ function startTurnTimer() {
       stopTurnTimer();
       return;
     }
+    if (window.FTUE?.isBlockingTimer()) return;
     turnTimeLeft = Math.max(0, turnTimeLeft - 0.25);
     updateTimerUI();
     if (turnTimeLeft <= 0) {
@@ -2559,6 +2578,7 @@ document.getElementById("play-btn")?.addEventListener("click", () => {
   renderDeckSelector();
   renderCardBackSelector();
   document.getElementById("deck-select-screen")?.classList.remove("hidden");
+  window.FTUE?.onDeckSelectOpen();
 });
 
 document.getElementById("deck-select-back-btn")?.addEventListener("click", () => {
@@ -2673,6 +2693,7 @@ function openRestScreen(isInitial = false) {
 
   screen.classList.remove("hidden");
   initRestSparks();
+  window.FTUE?.onRestOpen();
 }
 
 function renderInventoryModal() {
@@ -3057,6 +3078,7 @@ function openMapScreen(peekOnly = false) {
 
   renderProceduralMap(nav, peekOnly);
   screen.classList.remove("hidden");
+  window.FTUE?.onMapOpen(peekOnly);
 
   // Scroll to active floor
   const scrollArea = document.getElementById("map-scroll-area");
@@ -3269,6 +3291,7 @@ function openShopModal() {
 
   refreshShopUI();
   modal.classList.remove("hidden");
+  window.FTUE?.onShopOpen();
 }
 
 function openEventModal() {
@@ -3373,6 +3396,7 @@ function openEventModal() {
   };
 
   modal.classList.remove("hidden");
+  window.FTUE?.onEventOpen();
 }
 
 document.getElementById("open-map-btn")?.addEventListener("click", () => {

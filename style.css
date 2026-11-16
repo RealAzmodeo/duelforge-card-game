@@ -681,12 +681,6 @@ body {
   text-shadow: 0 2px 0 #020617;
   filter: drop-shadow(0 3px 0 rgba(2, 6, 23, 0.85));
 }
-  justify-content: center;
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 0 4px;
-}
 
 .pile-label {
   position: absolute;
@@ -711,7 +705,7 @@ body {
 .hand-card {
   width: clamp(68px, calc(8.2vw - 32px), 130px);
   height: clamp(100px, calc(11.6vw - 44px), 182px);
-  padding: 8px 8px 6px;
+  padding: 5% 6% 4%;
   background-color: transparent;
   background-size: 100% 100%;
   background-repeat: no-repeat;
@@ -720,6 +714,7 @@ body {
   cursor: pointer;
   transition: transform 0.14s ease, filter 0.14s ease;
   position: relative;
+  container-type: inline-size;
   filter: drop-shadow(3px 5px 0 rgba(2, 6, 23, 0.92));
   flex-shrink: 1;
   transform-style: preserve-3d;
@@ -746,28 +741,64 @@ body {
   100% { transform: translateY(-9px); }
 }
 
+.hand-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--card-bg, url("assets/ui/card_bg_neutral.png"));
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.35);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hand-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--card-frame, url("assets/ui/frame_unidad.png"));
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hand-card[class*="faction-"] {
+  background: transparent;
+  color: inherit;
+}
+
+.hand-card.faction-forja { --card-bg: url("assets/ui/card_bg_forja.png"); }
+.hand-card.faction-arcano { --card-bg: url("assets/ui/card_bg_arcano.png"); }
+.hand-card.faction-sindicato { --card-bg: url("assets/ui/card_bg_sindicato.png"); }
+.hand-card.faction-legion { --card-bg: url("assets/ui/card_bg_legion.png"); }
+.hand-card.faction-culto { --card-bg: url("assets/ui/card_bg_culto.png"); }
+.hand-card.faction-neutral { --card-bg: url("assets/ui/card_bg_neutral.png"); }
+
 .hand-card.type-Unidad {
-  background-image: url("assets/ui/frame_unidad.png");
+  --card-frame: url("assets/ui/frame_unidad.png");
 }
 
 .hand-card.type-Hechizo {
-  background-image: url("assets/ui/frame_hechizo.png");
+  --card-frame: url("assets/ui/frame_hechizo.png");
 }
 
 .hand-card.type-Tactica {
-  background-image: url("assets/ui/frame_tactica.png");
+  --card-frame: url("assets/ui/frame_tactica.png");
 }
 
 .hand-card.type-Reliquia {
-  background-image: url("assets/ui/frame_reliquia.png");
+  --card-frame: url("assets/ui/frame_reliquia.png");
 }
 
 .hand-card.type-Equipo {
-  background-image: url("assets/ui/frame_equipo.png");
+  --card-frame: url("assets/ui/frame_equipo.png");
 }
 
 .hand-card.ephemeral {
-  background-image: url("assets/ui/frame_efimera.png");
+  --card-frame: url("assets/ui/frame_efimera.png");
 }
 
 .hand-card.deal-in {
@@ -787,14 +818,14 @@ body {
 .card-banner {
   position: relative;
   z-index: 12;
-  padding: 2px 4px;
+  padding: clamp(2px, 2cqi, 4px) clamp(2px, 2.5cqi, 5px);
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 4px;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 10px;
+  font-size: clamp(8px, 8cqi, 12px);
   color: #fff;
   transform: translateZ(38px);
 }
@@ -824,32 +855,38 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 2px 0 #020617;
 }
 
+.hand-card .energy-cost {
+  width: clamp(16px, 20cqi, 30px);
+  height: clamp(16px, 20cqi, 30px);
+  border-radius: clamp(4px, 5.5cqi, 8px);
+  font-size: clamp(9px, 11cqi, 16px);
+}
+
 .energy-cost > span {
   transform: rotate(-45deg);
   display: inline-block;
 }
 
 .card-art-wrap {
-  flex: 1;
+  position: absolute;
+  inset: 11% 13.5% 13% 13.5%;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
   z-index: 2;
-  overflow: visible;
-  padding: 2px;
+  overflow: hidden;
+  padding: 2cqi;
   transform: translateZ(16px) translate(var(--px, 0px), var(--py, 0px));
   transition: transform 0.12s ease;
 }
 
 .card-art-wrap img {
-  max-width: 128%;
-  max-height: clamp(100px, 10vw, 162px);
-  width: auto;
-  height: auto;
-  flex-shrink: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
-  transform: translateY(-6%);
+  object-position: center;
   filter: drop-shadow(0 6px 4px rgba(2, 6, 23, 0.85));
 }
 
@@ -865,6 +902,14 @@ body {
   transform: translateZ(42px);
 }
 
+.hand-card .card-side-badges {
+  right: 7.5%;
+  top: 52%;
+  transform: translate(50%, -50%) translateZ(42px);
+  align-items: center;
+  gap: clamp(2px, 3cqi, 5px);
+}
+
 .badge-icon {
   width: 28px;
   height: 28px;
@@ -873,6 +918,11 @@ body {
   justify-content: center;
   filter: drop-shadow(0 3px 0 #020617) drop-shadow(0 0 6px rgba(2, 6, 23, 0.85));
   transition: transform 0.12s ease;
+}
+
+.hand-card .badge-icon {
+  width: clamp(20px, 28cqi, 44px);
+  height: clamp(20px, 28cqi, 44px);
 }
 
 .badge-icon img {
@@ -967,29 +1017,30 @@ body {
 
 .deck-choice-card {
   --f-accent: #facc15;
-  --f-glow: rgba(250, 204, 21, 0.35);
+  --f-glow: rgba(250, 204, 21, 0.22);
   position: relative;
   height: clamp(390px, 50vh, 465px);
   background: #090d16;
-  border: 2px solid #283548;
+  border: none;
+  outline: none;
   border-radius: 16px;
   padding: 12px 10px 14px;
   cursor: pointer;
   text-align: center;
   color: #e2e8f0;
   overflow: hidden;
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.22s ease, box-shadow 0.22s ease;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
 }
 
-.deck-choice-card[data-faction="forja"] { --f-accent: #f97316; --f-glow: rgba(249, 115, 22, 0.42); }
-.deck-choice-card[data-faction="arcano"] { --f-accent: #38bdf8; --f-glow: rgba(56, 189, 248, 0.42); }
-.deck-choice-card[data-faction="sindicato"] { --f-accent: #fbbf24; --f-glow: rgba(251, 191, 36, 0.42); }
-.deck-choice-card[data-faction="legion"] { --f-accent: #ef4444; --f-glow: rgba(239, 68, 68, 0.45); }
-.deck-choice-card[data-faction="culto"] { --f-accent: #a855f7; --f-glow: rgba(168, 85, 247, 0.45); }
+.deck-choice-card[data-faction="forja"] { --f-accent: #f97316; --f-glow: rgba(249, 115, 22, 0.24); }
+.deck-choice-card[data-faction="arcano"] { --f-accent: #38bdf8; --f-glow: rgba(56, 189, 248, 0.24); }
+.deck-choice-card[data-faction="sindicato"] { --f-accent: #fbbf24; --f-glow: rgba(251, 191, 36, 0.24); }
+.deck-choice-card[data-faction="legion"] { --f-accent: #ef4444; --f-glow: rgba(239, 68, 68, 0.26); }
+.deck-choice-card[data-faction="culto"] { --f-accent: #a855f7; --f-glow: rgba(168, 85, 247, 0.26); }
 
 .deck-hero-bg {
   position: absolute;
@@ -1018,19 +1069,17 @@ body {
 
 .deck-choice-card:hover {
   transform: translateY(-6px) scale(1.02);
-  border-color: var(--f-accent);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.72), 0 0 22px var(--f-glow);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.72), 0 0 26px var(--f-glow);
 }
 
 .deck-choice-card:hover .deck-hero-bg,
 .deck-choice-card.selected .deck-hero-bg {
-  opacity: 0.88;
+  opacity: 0.9;
   transform: translateX(-50%) scale(1.09);
 }
 
 .deck-choice-card.selected {
-  border-color: var(--f-accent);
-  box-shadow: 0 0 24px var(--f-glow), inset 0 0 18px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 26px var(--f-glow), inset 0 0 28px var(--f-glow);
 }
 
 .deck-pillar-top {
@@ -1073,11 +1122,12 @@ body {
 
 .deck-hero-ribbon {
   width: 100%;
-  min-height: 34px;
-  padding: 6px 14px;
+  min-height: 46px;
+  padding: 8px 26px;
+  background-image: var(--ribbon-url);
   background-size: 100% 100%;
-  background-repeat: no-repeat;
   background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1997,17 +2047,23 @@ body {
 
 .play-hero-btn {
   font-family: var(--font-display);
-  font-size: clamp(24px, 2.4vw, 34px);
+  font-size: clamp(18px, 1.65vw, 22px);
   font-weight: 900;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   color: #ffffff;
-  background: url("assets/ui/btn_plate_blue.png") center/100% 100% no-repeat;
-  border: none;
-  min-width: clamp(240px, 22vw, 320px);
-  min-height: clamp(78px, 7vw, 102px);
-  padding: 16px 64px;
+  background: transparent;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 12px 34px;
+  border-image-source: url("assets/ui/btn_plate_blue.png");
+  border-image-slice: 32% 20% 32% 20% fill;
+  border-image-width: 12px 34px;
+  border-image-repeat: stretch;
+  min-width: clamp(220px, 20vw, 285px);
+  min-height: clamp(54px, 4.6vw, 64px);
+  padding: 6px 22px;
   cursor: pointer;
-  filter: drop-shadow(0 8px 0 #020617) drop-shadow(0 0 24px rgba(56, 189, 248, 0.5));
+  filter: drop-shadow(0 6px 0 #020617) drop-shadow(0 0 20px rgba(56, 189, 248, 0.45));
   transition: transform 0.12s ease, filter 0.12s ease;
 }
 
@@ -2557,17 +2613,7 @@ body {
 .hand-card.mini-deck-card {
   width: 92px;
   height: 130px;
-  padding: 5px 6px;
   flex-shrink: 0;
-}
-
-.hand-card.mini-deck-card .card-art-wrap img {
-  max-width: 116%;
-  max-height: 78px;
-}
-
-.hand-card.mini-deck-card .card-banner {
-  font-size: 9px;
 }
 
 .hand-card.mini-deck-card .card-footer-badge {
@@ -2951,12 +2997,6 @@ body {
 .inventory-card-stack .hand-card {
   width: 126px;
   height: 176px;
-  padding: 8px 8px 6px;
-}
-
-.inventory-card-stack .hand-card .card-art-wrap img {
-  max-width: 120%;
-  max-height: 118px;
 }
 
 .inv-qty-pill {
@@ -2983,20 +3023,14 @@ body {
 /* ================= CARD TYPE CREST (TOP-CENTER) & RARITY FRAME SHAPES ================= */
 .card-type-crest {
   position: absolute;
-  top: -24px;
+  top: clamp(-26px, -18cqi, -12px);
   left: 50%;
   transform: translateX(-50%) translateZ(46px);
-  width: 50px;
-  height: 50px;
+  width: clamp(24px, 38cqi, 56px);
+  height: clamp(24px, 38cqi, 56px);
   z-index: 16;
   pointer-events: none;
   filter: drop-shadow(0 4px 0 #020617) drop-shadow(0 0 8px rgba(2, 6, 23, 0.9));
-}
-
-.hand-card.mini-deck-card .card-type-crest {
-  width: 36px;
-  height: 36px;
-  top: -18px;
 }
 
 .card-banner-cost-only {
@@ -3004,22 +3038,26 @@ body {
 }
 
 .card-stat-icons {
-  position: relative;
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: clamp(11px, 15cqi, 24px);
   z-index: 15;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 2px 4px 15px;
+  gap: clamp(3px, 5.5cqi, 10px);
+  padding: 0;
+  pointer-events: none;
   transform: translateZ(44px);
 }
 
 .stat-ic {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: clamp(1px, 2cqi, 4px);
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: clamp(9px, 11cqi, 16px);
   font-weight: 900;
   color: #ffffff;
   -webkit-text-stroke: 2px #020617;
@@ -3028,31 +3066,22 @@ body {
 }
 
 .stat-ic img {
-  width: 18px;
-  height: 18px;
+  width: clamp(12px, 14.5cqi, 22px);
+  height: clamp(12px, 14.5cqi, 22px);
   object-fit: contain;
   filter: drop-shadow(0 2px 0 #020617);
 }
 
-.hand-card.mini-deck-card .stat-ic {
-  font-size: 11px;
-}
-
-.hand-card.mini-deck-card .stat-ic img {
-  width: 14px;
-  height: 14px;
-}
-
 .card-name-ribbon {
   position: absolute;
-  bottom: -16px;
+  bottom: clamp(-18px, -11cqi, -8px);
   left: -12%;
   width: 124%;
-  height: 36px;
+  height: clamp(19px, 27cqi, 42px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 16px 0;
+  padding: clamp(1px, 1.5cqi, 3px) clamp(8px, 12cqi, 20px) 0;
   transform: translateZ(48px);
   z-index: 17;
   pointer-events: none;
@@ -3073,7 +3102,7 @@ body {
   position: relative;
   z-index: 1;
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: clamp(7.5px, 9cqi, 13.5px);
   font-weight: 900;
   color: #ffffff;
   white-space: nowrap;
@@ -3082,15 +3111,6 @@ body {
   -webkit-text-stroke: 2.2px #020617;
   paint-order: stroke fill;
   text-shadow: 0 2px 0 #020617;
-}
-
-.hand-card.mini-deck-card .card-name-ribbon {
-  height: 28px;
-  bottom: -13px;
-}
-
-.hand-card.mini-deck-card .card-name-ribbon span {
-  font-size: 9px;
 }
 
 .ribbon-comun::before { background-image: url("assets/ui/ribbon_comun.png"); }
@@ -3123,20 +3143,12 @@ body {
 }
 
 .hand-card.rarity-rara {
-  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 10px), 0 10px);
   filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.7)) drop-shadow(3px 5px 0 #020617);
 }
 
 .hand-card.rarity-epica,
 .hand-card.rarity-legendaria {
-  clip-path: polygon(0 12px, 14px 0, calc(50% - 14px) 0, 50% -4px, calc(50% + 14px) 0, calc(100% - 14px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 12px));
   filter: drop-shadow(0 0 11px rgba(192, 132, 252, 0.85)) drop-shadow(3px 5px 0 #020617);
-}
-
-.hand-card.rarity-rara,
-.hand-card.rarity-epica,
-.hand-card.rarity-legendaria {
-  clip-path: none;
 }
 
 
@@ -3144,10 +3156,10 @@ body {
 .title-actions {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   justify-content: center;
   align-items: center;
-  margin-top: 22px;
+  margin-top: 26px;
 }
 
 .play-hero-btn--vs {
@@ -3324,18 +3336,7 @@ body {
 .deck-detail-card-item .hand-card {
   width: 126px;
   height: 176px;
-  padding: 8px 8px 6px;
   pointer-events: none;
-}
-
-.deck-detail-card-item .hand-card .card-art-wrap {
-  overflow: hidden;
-}
-
-.deck-detail-card-item .hand-card .card-art-wrap img {
-  max-width: 100%;
-  max-height: 98px;
-  object-fit: contain;
 }
 
 .deck-detail-card-item .deck-detail-qty {
@@ -3621,7 +3622,7 @@ body {
   background-color: #0d1422;
   background-image:
     linear-gradient(180deg, rgba(9, 13, 22, 0.35) 0%, rgba(9, 13, 22, 0.25) 50%, rgba(9, 13, 22, 0.45) 100%),
-    url("assets/ui/map_landscape.png");
+    var(--map-bg, url("assets/ui/map_landscape.png"));
   background-size: cover;
   background-position: center;
   border: 1px solid #1e293b;
@@ -3951,17 +3952,26 @@ body {
    COLLECTION & COMPENDIUM SCREEN (GAME-NATIVE TACTILE UI)
    ============================================================================= */
 .collection-entry-btn {
-  margin-top: 4px;
-  min-width: 240px;
-  height: 46px;
-  padding: 0 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 6px;
+  min-width: 210px;
+  height: 44px;
+  padding: 0 18px;
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
-  letter-spacing: 1.8px;
+  letter-spacing: 1.5px;
   color: #f8fafc;
-  background: url("assets/ui/btn_plate_slate.png") center/100% 100% no-repeat;
-  border: none;
+  background: transparent;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 10px 26px;
+  border-image-source: url("assets/ui/btn_plate_slate.png");
+  border-image-slice: 32% 20% 32% 20% fill;
+  border-image-width: 10px 26px;
+  border-image-repeat: stretch;
   cursor: pointer;
   -webkit-text-stroke: 2px #020617;
   paint-order: stroke fill;
@@ -4163,18 +4173,7 @@ body {
 .collection-card-slot .hand-card {
   width: 126px;
   height: 176px;
-  padding: 8px 8px 6px;
   pointer-events: none;
-}
-
-.collection-card-slot .hand-card .card-art-wrap {
-  overflow: hidden;
-}
-
-.collection-card-slot .hand-card .card-art-wrap img {
-  max-width: 100%;
-  max-height: 98px;
-  object-fit: contain;
 }
 
 .collection-card-slot.locked .hand-card {
@@ -4659,8 +4658,9 @@ body {
 
 .ftue-spotlight {
   position: fixed;
-  border-radius: 12px;
-  border: 2px solid #facc15;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.6), 0 0 28px rgba(251, 191, 36, 0.22);
   box-shadow:
     0 0 0 9999px rgba(6, 9, 18, 0.68),
     0 0 22px rgba(250, 204, 21, 0.55);
@@ -4682,60 +4682,162 @@ body {
   }
 }
 
+.ftue-pointer {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 410;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.85)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.9));
+  animation: ftueArrowBounceDown 0.9s ease-in-out infinite;
+}
+
+.ftue-pointer.hidden {
+  display: none;
+}
+
+.ftue-pointer.dir-up {
+  animation: ftueArrowBounceUp 0.9s ease-in-out infinite;
+}
+
+.ftue-pointer.dir-left {
+  animation: ftueArrowBounceLeft 0.9s ease-in-out infinite;
+}
+
+.ftue-pointer.dir-right {
+  animation: ftueArrowBounceRight 0.9s ease-in-out infinite;
+}
+
+@keyframes ftueArrowBounceDown {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -10px); }
+}
+
+@keyframes ftueArrowBounceUp {
+  0%, 100% { transform: translate(-50%, 0) rotate(180deg); }
+  50% { transform: translate(-50%, 10px) rotate(180deg); }
+}
+
+@keyframes ftueArrowBounceLeft {
+  0%, 100% { transform: translate(0, -50%) rotate(90deg); }
+  50% { transform: translate(10px, -50%) rotate(90deg); }
+}
+
+@keyframes ftueArrowBounceRight {
+  0%, 100% { transform: translate(0, -50%) rotate(-90deg); }
+  50% { transform: translate(-10px, -50%) rotate(-90deg); }
+}
+
 .ftue-popover {
   position: fixed;
-  width: min(330px, calc(100vw - 24px));
-  background: linear-gradient(180deg, #162033 0%, #0d1422 100%);
-  border: 1.5px solid #38bdf8;
-  border-radius: 12px;
-  padding: 12px 14px;
-  color: #f8fafc;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
+  left: 16px;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  width: min(600px, calc(100vw - 32px));
+  padding-bottom: 14px;
   pointer-events: auto;
-  transition: left 0.2s ease, top 0.2s ease;
+  transition: left 0.22s ease, right 0.22s ease;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.85));
+}
+
+.ftue-popover.dock-right {
+  left: auto;
+  right: 16px;
+}
+
+.ftue-mentor-frame {
+  position: relative;
+  width: 224px;
+  height: 224px;
+  flex-shrink: 0;
+  margin-right: -28px;
+  margin-bottom: -14px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.ftue-mentor-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  display: block;
+  transform-origin: 50% 96%;
+  animation: ftueMentorBreathe 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.78));
+}
+
+@keyframes ftueMentorBreathe {
+  0%, 100% {
+    transform: translateY(0px) scale(1, 1) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.015, 1.028) rotate(0.6deg);
+  }
+}
+
+.ftue-bubble-box {
+  position: relative;
+  flex: 1;
+  min-height: 168px;
+  background: transparent;
+  background-image: url("assets/ui/ftue_bubble.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  border: none;
+  box-shadow: none;
+  padding: 24px 34px 36px 40px;
+  margin-bottom: 10px;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 2;
 }
 
 .ftue-popover-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
 }
 
 .ftue-badge {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.14);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  padding: 2px 8px;
-  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.85);
 }
 
 .ftue-skip-btn {
   background: transparent;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  color: #cbd5e1;
+  border: none;
+  color: #94a3b8;
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 6px;
+  padding: 2px 4px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
 }
 
 .ftue-skip-btn:hover {
-  background: rgba(239, 68, 68, 0.18);
-  border-color: #f87171;
   color: #fecaca;
 }
 
 .ftue-text {
   margin: 0;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: #e2e8f0;
   font-weight: 600;
 }
@@ -4743,7 +4845,7 @@ body {
 .ftue-popover-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .ftue-popover-actions:empty,
@@ -4752,19 +4854,28 @@ body {
 }
 
 .ftue-ok-btn {
-  background: linear-gradient(180deg, #eab308 0%, #ca8a04 100%);
-  color: #0f172a;
+  min-width: 118px;
+  height: 36px;
+  padding: 0 18px;
+  background: transparent;
+  background-image: url("assets/ui/btn_plate_amber.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  color: #fffbeb;
   border: none;
-  border-radius: 7px;
-  padding: 5px 14px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
   cursor: pointer;
+  transition: transform 0.14s ease, filter 0.14s ease;
 }
 
 .ftue-ok-btn:hover {
-  filter: brightness(1.08);
+  transform: translateY(-1px);
+  filter: brightness(1.12);
 }
 
 /* Quick Reference Cheatsheet Modal */

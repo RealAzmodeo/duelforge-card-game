@@ -25,6 +25,8 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .hidden {
@@ -33,21 +35,24 @@ html, body {
 
 /* Topbar */
 .topbar {
-  height: 52px;
+  min-height: 52px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
-  padding: 0 14px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  flex-shrink: 0;
 }
 
 .topbar-left,
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .brand-badge {
@@ -65,6 +70,7 @@ html, body {
 .scene-tabs {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -72,7 +78,7 @@ html, body {
   background: transparent;
   color: var(--text-muted);
   border: 1px solid transparent;
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
@@ -205,7 +211,8 @@ html, body {
 
 /* Workspace 3-column layout */
 .workspace {
-  height: calc(100vh - 52px);
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 240px 1fr 310px;
 }

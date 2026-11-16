@@ -2,8 +2,8 @@
 // No edites manualmente a menos que sepas lo que haces.
 window.SCENE_LAYOUT = {
   "#rest-continue-btn": {
-    "x": -327,
-    "y": 7,
+    "x": -466,
+    "y": 31,
     "rotate": 13
   },
   "#rest-bag-btn > img": {
@@ -19,7 +19,11 @@ window.SCENE_LAYOUT = {
     "scale": 0.83
   },
   "#rest-fire-choices": {
-    "x": 5,
-    "y": 548
+    "x": 7,
+    "y": 735
+  },
+  "#rest-bag-btn": {
+    "x": 245,
+    "y": -47
   }
 };

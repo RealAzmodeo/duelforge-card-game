@@ -5,13 +5,20 @@
     "#title-screen": "--title-bg",
     ".main-stage": "--arena-bg",
     "#rest-screen": "--rest-bg",
+    "#map-board-canvas": "--map-bg",
   };
 
   const SCENE_CONTAINER_MAP = {
     title: "#title-screen",
+    deck: "#deck-select-screen",
+    map: "#map-screen",
     duel: ".main-stage",
     rest: "#rest-screen",
+    shop: "#shop-modal .shop-modal-card",
+    event: "#event-modal .event-modal-card",
     booster: "#booster-modal .booster-modal-card",
+    collection: "#collection-screen",
+    vslobby: "#vs-lobby-modal",
     gameover: "#game-over-modal .gameover-card",
     inventory: "#inventory-modal .inventory-modal-card",
   };
@@ -235,8 +242,21 @@
   const isEditor = new URLSearchParams(window.location.search).get("editor") === "1";
   if (!isEditor) return;
 
+  // Suppress FTUE overlays inside editor preview
+  if (window.FTUE) {
+    const noop = () => {};
+    window.FTUE.onDeckSelectOpen = noop;
+    window.FTUE.onBoosterOpen = noop;
+    window.FTUE.onMapOpen = noop;
+    window.FTUE.onCombatOpen = noop;
+    window.FTUE.onRestOpen = noop;
+  }
+
   const styleEl = document.createElement("style");
   styleEl.textContent = `
+    #ftue-overlay, #ftue-cheatsheet-modal {
+      display: none !important;
+    }
     .editor-hover-el {
       outline: 1px dashed #60a5fa !important;
       outline-offset: 2px !important;
@@ -317,18 +337,68 @@
 
   let selectedSelector = null;
   let knownSelectors = [];
-  let activePrefab = null; // { rootSelector, childSelectors }
+  let activePrefab = null;
   let freePick = true;
   let dragState = null;
-  let duelSeeded = false;
+  let runSeeded = false;
+  let allowProgrammaticClick = false;
 
-  function ensureDuelPopulated() {
-    if (duelSeeded) return;
-    const handEl = document.getElementById("player-hand");
-    if (handEl && handEl.children.length === 0 && typeof window.startNewRun === "function") {
-      duelSeeded = true;
+  const ALL_SCREEN_IDS = [
+    "title-screen",
+    "deck-select-screen",
+    "map-screen",
+    "rest-screen",
+    "shop-modal",
+    "event-modal",
+    "booster-modal",
+    "collection-screen",
+    "vs-lobby-modal",
+    "game-over-modal",
+    "inventory-modal",
+  ];
+
+  function hideAllOverlays() {
+    ALL_SCREEN_IDS.forEach((id) => {
+      document.getElementById(id)?.classList.add("hidden");
+    });
+  }
+
+  function ensureEditorRun() {
+    if (!runSeeded && typeof window.startNewRun === "function") {
+      runSeeded = true;
       window.startNewRun();
-      applySceneLayout(window.SCENE_LAYOUT);
+      if (typeof window.stopTurnTimer === "function") window.stopTurnTimer();
+    }
+    if (typeof window.state === "object" && window.state && window.state.player) {
+      if (Array.isArray(window.state.player.board) && !window.state.player.board.some(Boolean)) {
+        window.state.player.board[0] = {
+          name: "Escudero de Acero",
+          art: "assets/cards/forja_escudero_acero.png",
+          atk: 2,
+          hp: 5,
+          guard: true,
+          ready: true,
+          equips: ["Coraza"],
+        };
+      }
+      if (Array.isArray(window.state.enemy?.board) && !window.state.enemy.board.some(Boolean)) {
+        window.state.enemy.board[1] = {
+          name: "Acechador",
+          art: "assets/cards/culto_acechador.png",
+          atk: 3,
+          hp: 3,
+          guard: false,
+          stunned: false,
+        };
+      }
+      if (Array.isArray(window.state.player.relics) && !window.state.player.relics.some(Boolean)) {
+        window.state.player.relics[0] = {
+          name: "Yunque Eterno",
+          art: "assets/cards/forja_yunque_eterno.png",
+          turnsLeft: 3,
+        };
+      }
+      if (typeof window.render === "function") window.render();
     }
   }
 
@@ -501,6 +571,7 @@
   document.addEventListener(
     "click",
     (e) => {
+      if (allowProgrammaticClick) return;
       e.preventDefault();
       e.stopPropagation();
     },
@@ -656,31 +727,69 @@
   window.addEventListener("scroll", updateGizmo, true);
 
   function setScene(sceneId) {
-    const title = document.getElementById("title-screen");
-    const rest = document.getElementById("rest-screen");
-    const booster = document.getElementById("booster-modal");
-    const gameover = document.getElementById("game-over-modal");
-    const inventory = document.getElementById("inventory-modal");
+    hideAllOverlays();
 
-    if (title) title.classList.add("hidden");
-    if (rest) rest.classList.add("hidden");
-    if (booster) booster.classList.add("hidden");
-    if (gameover) gameover.classList.add("hidden");
-    if (inventory) inventory.classList.add("hidden");
-
-    if (sceneId === "duel") {
-      ensureDuelPopulated();
-    } else if (sceneId === "title" && title) {
-      title.classList.remove("hidden");
-    } else if (sceneId === "rest" && rest) {
-      rest.classList.remove("hidden");
-    } else if (sceneId === "booster" && booster) {
-      booster.classList.remove("hidden");
-    } else if (sceneId === "gameover" && gameover) {
-      gameover.classList.remove("hidden");
-    } else if (sceneId === "inventory" && inventory) {
-      inventory.classList.remove("hidden");
+    if (sceneId === "title") {
+      document.getElementById("title-screen")?.classList.remove("hidden");
+    } else if (sceneId === "deck") {
+      if (typeof window.renderDeckSelector === "function") window.renderDeckSelector();
+      if (typeof window.renderCardBackSelector === "function") window.renderCardBackSelector();
+      document.getElementById("deck-select-screen")?.classList.remove("hidden");
+    } else if (sceneId === "map") {
+      ensureEditorRun();
+      hideAllOverlays();
+      if (typeof window.openMapScreen === "function") window.openMapScreen(true);
+      document.getElementById("map-screen")?.classList.remove("hidden");
+    } else if (sceneId === "duel") {
+      ensureEditorRun();
+      hideAllOverlays();
+    } else if (sceneId === "rest") {
+      ensureEditorRun();
+      hideAllOverlays();
+      if (typeof window.openRestScreen === "function") {
+        window.openRestScreen();
+      } else {
+        document.getElementById("rest-screen")?.classList.remove("hidden");
+      }
+    } else if (sceneId === "shop") {
+      ensureEditorRun();
+      hideAllOverlays();
+      if (typeof window.openShopModal === "function") window.openShopModal();
+      document.getElementById("shop-modal")?.classList.remove("hidden");
+    } else if (sceneId === "event") {
+      ensureEditorRun();
+      hideAllOverlays();
+      if (typeof window.openEventModal === "function") window.openEventModal();
+      document.getElementById("event-modal")?.classList.remove("hidden");
+    } else if (sceneId === "booster") {
+      ensureEditorRun();
+      hideAllOverlays();
+      if (typeof window.openBoosterModal === "function") window.openBoosterModal(false);
+      document.getElementById("booster-modal")?.classList.remove("hidden");
+    } else if (sceneId === "collection") {
+      if (typeof window.openCollectionScreen === "function") window.openCollectionScreen("cards");
+      document.getElementById("collection-screen")?.classList.remove("hidden");
+    } else if (sceneId === "vslobby") {
+      const vsBtn = document.getElementById("play-vs-btn");
+      if (vsBtn) {
+        allowProgrammaticClick = true;
+        vsBtn.click();
+        allowProgrammaticClick = false;
+      }
+      hideAllOverlays();
+      document.getElementById("vs-lobby-modal")?.classList.remove("hidden");
+    } else if (sceneId === "gameover") {
+      ensureEditorRun();
+      hideAllOverlays();
+      document.getElementById("game-over-modal")?.classList.remove("hidden");
+    } else if (sceneId === "inventory") {
+      ensureEditorRun();
+      hideAllOverlays();
+      if (typeof window.renderInventoryModal === "function") window.renderInventoryModal();
+      document.getElementById("inventory-modal")?.classList.remove("hidden");
     }
+
+    applySceneLayout(window.SCENE_LAYOUT);
   }
 
   function setPrefabHighlight(prefab) {

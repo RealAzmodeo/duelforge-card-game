@@ -188,16 +188,18 @@
       timeLeft: reactionData.timeLeft
     };
 
+    const typeIcon = typeof getCardTypeIcon === "function" ? getCardTypeIcon("Unidad") : "assets/ui/type_unidad.png";
     cardSlot.innerHTML = `
-      <div class="hand-card type-Unidad">
-        <div class="card-banner">
-          <span class="card-title">${reactionData.cardName}</span>
+      <div class="hand-card type-Unidad faction-neutral rarity-rara">
+        <div class="card-type-crest" title="Tipo: Unidad"><img src="${typeIcon}" alt="Unidad" /></div>
+        <div class="card-banner card-banner-cost-only">
           <span class="energy-cost"><span>${reactionData.dmg}</span></span>
         </div>
         <div class="card-art-wrap">
           <img src="${reactionData.art}" alt="${reactionData.cardName}" />
         </div>
-        <div class="card-footer-badge">DMG ${reactionData.dmg}</div>
+        <div class="card-stat-icons"><span class="stat-ic"><img src="assets/ui/stat_atk.png" alt="DMG" /><b>${reactionData.dmg}</b></span></div>
+        <div class="card-name-ribbon ribbon-rara"><span>${reactionData.cardName}</span></div>
       </div>
     `;
     textEl.textContent = `Ataque rival (${reactionData.dmg} DMG). Elige una unidad tuya para bloquear o juega [REACCION].`;
