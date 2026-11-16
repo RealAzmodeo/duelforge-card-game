@@ -12,6 +12,8 @@
   let pvpMatch = null;
   let hostReactionTimer = null;
   let guestReactionTimer = null;
+  let attackerWaitTimer = null;
+  let toastTimer = null;
 
   function sanitizeCard(card) {
     if (!card) return null;
@@ -98,13 +100,67 @@
     }
   }
 
-  function buildViewForSide(viewerSide, hintText = "") {
+  function mirrorSelector(selector) {
+    if (!selector) return selector;
+    return selector
+      .replace("#enemy-hero-panel", "__TEMP_P__")
+      .replace("#player-hero-panel", "#enemy-hero-panel")
+      .replace("__TEMP_P__", "#player-hero-panel")
+      .replace("#enemy-slots", "__TEMP_S__")
+      .replace("#player-slots", "#enemy-slots")
+      .replace("__TEMP_S__", "#player-slots")
+      .replace("#enemy-hand", "__TEMP_H__")
+      .replace("#player-hand", "#enemy-hand")
+      .replace("__TEMP_H__", "#player-hand");
+  }
+
+  function buildFxForViewer(rawEvents, actorSide, viewerSide) {
+    if (!rawEvents || !rawEvents.length) return [];
+    const samePerspective = actorSide === viewerSide;
+    return rawEvents.map((ev) => ({
+      ...ev,
+      selector: samePerspective ? ev.selector : mirrorSelector(ev.selector)
+    }));
+  }
+
+  function showPvpToast(toast) {
+    const el = document.getElementById("pvp-action-toast");
+    if (!el || !toast || !toast.text) return;
+    el.innerHTML = `${toast.art ? `<img src="${toast.art}" alt="" />` : ""}<span>${toast.text}</span>`;
+    el.classList.remove("hidden");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      el.classList.add("hidden");
+    }, 2400);
+  }
+
+  function playLocalFxEvents(events, sfxList) {
+    if (Array.isArray(sfxList)) {
+      sfxList.forEach((s) => window.SFX?.play(s));
+    }
+    if (!Array.isArray(events)) return;
+    events.forEach((ev) => {
+      if (ev.kind === "fx") {
+        spawnFx(ev.selector, ev.text, ev.cls);
+      } else if (ev.kind === "vfx") {
+        spawnVfxShape(ev.selector, ev.cls);
+      } else if (ev.kind === "shake") {
+        triggerShake(ev.selector);
+      }
+    });
+  }
+
+  function buildViewForSide(viewerSide, opts = {}) {
     const otherSide = viewerSide === "p1" ? "p2" : "p1";
     const me = pvpMatch[viewerSide];
     const rival = pvpMatch[otherSide];
     const isMyTurn = pvpMatch.activeSide === viewerSide;
     const reactionForMe =
       pvpMatch.pendingReaction && pvpMatch.pendingReaction.targetSide === viewerSide
+        ? { ...pvpMatch.pendingReaction }
+        : null;
+    const waitingReaction =
+      pvpMatch.pendingReaction && pvpMatch.pendingReaction.attackerSide === viewerSide
         ? { ...pvpMatch.pendingReaction }
         : null;
 
@@ -116,9 +172,13 @@
       selectedUnitIndex: null,
       gameOver: pvpMatch.gameOver,
       winnerSide: pvpMatch.winnerSide,
-      hintText,
+      hintText: opts.hintText || "",
+      toast: opts.toast || null,
+      fxEvents: opts.fxEvents || [],
+      sfx: opts.sfx || [],
       pendingReactionForMe: reactionForMe,
-      waitingForRivalReaction: Boolean(pvpMatch.pendingReaction && !reactionForMe),
+      waitingReactionInfo: waitingReaction,
+      pvpAttackingEnemySlot: reactionForMe ? reactionForMe.attackerSlotIdx : null,
       player: {
         name: me.name,
         avatar: me.avatar,
@@ -153,10 +213,23 @@
     };
   }
 
-  function syncBothClients(hintForP1 = "", hintForP2 = "") {
+  function syncBothClients(opts = {}) {
     if (!pvpMatch) return;
-    const p1View = buildViewForSide("p1", hintForP1);
-    const p2View = buildViewForSide("p2", hintForP2);
+    const actorSide = opts.actorSide || "p1";
+    const rawFx = opts.rawFx || [];
+
+    const p1View = buildViewForSide("p1", {
+      hintText: opts.hintP1 || "",
+      toast: opts.toastP1 || null,
+      fxEvents: buildFxForViewer(rawFx, actorSide, "p1"),
+      sfx: opts.sfxP1 || []
+    });
+    const p2View = buildViewForSide("p2", {
+      hintText: opts.hintP2 || "",
+      toast: opts.toastP2 || null,
+      fxEvents: buildFxForViewer(rawFx, actorSide, "p2"),
+      sfx: opts.sfxP2 || []
+    });
 
     applyLocalViewState(p1View);
     window.PvpNet.send({ type: "STATE_SYNC", view: p2View });
@@ -171,66 +244,102 @@
       clearInterval(guestReactionTimer);
       guestReactionTimer = null;
     }
+    if (attackerWaitTimer) {
+      clearInterval(attackerWaitTimer);
+      attackerWaitTimer = null;
+    }
   }
 
-  function openPvpReactionBanner(reactionData, isHost) {
+  function openPvpReactionBanner(reactionData, isDefender, isHost) {
     const banner = document.getElementById("reaction-banner");
     const cardSlot = document.getElementById("reaction-enemy-card");
+    const tagEl = banner?.querySelector(".reaction-tag");
     const textEl = document.getElementById("reaction-text");
     const fillEl = document.getElementById("reaction-timer-fill");
     const numEl = document.getElementById("reaction-timer-num");
     const passBtn = document.getElementById("reaction-pass-btn");
     if (!banner || !cardSlot) return;
 
-    state.reactionWindow = {
-      totalDmg: reactionData.dmg,
-      blockerIdx: reactionData.blockerIdx,
-      timeLeft: reactionData.timeLeft
-    };
+    if (isDefender) {
+      state.reactionWindow = {
+        totalDmg: reactionData.dmg,
+        blockerIdx: reactionData.blockerIdx,
+        timeLeft: reactionData.timeLeft
+      };
+      if (tagEl) tagEl.textContent = "ATAQUE RIVAL - RESPONDE O BLOQUEA";
+      textEl.textContent = `${reactionData.cardName} te ataca (${reactionData.dmg} DMG). Clic en una unidad tuya para bloquear, juega [REACCION] o pulsa DEJAR PASAR.`;
+      if (passBtn) {
+        passBtn.classList.remove("hidden");
+        passBtn.onclick = () => window.PvpEngine.sendAction("REACTION_PASS", {});
+      }
+    } else {
+      state.reactionWindow = null;
+      if (tagEl) tagEl.textContent = "ATAQUE EN CURSO - ESPERANDO RIVAL";
+      textEl.textContent = `Tu ${reactionData.cardName} (${reactionData.dmg} DMG) esta atacando. Esperando si el rival bloquea o responde...`;
+      if (passBtn) passBtn.classList.add("hidden");
+    }
 
-    const typeIcon = typeof getCardTypeIcon === "function" ? getCardTypeIcon("Unidad") : "assets/ui/type_unidad.png";
     cardSlot.innerHTML = `
-      <div class="hand-card type-Unidad faction-neutral rarity-rara">
-        <div class="card-type-crest" title="Tipo: Unidad"><img src="${typeIcon}" alt="Unidad" /></div>
-        <div class="card-banner card-banner-cost-only">
+      <div class="hand-card type-Unidad">
+        <div class="card-banner">
+          <span class="card-title">${reactionData.cardName}</span>
           <span class="energy-cost"><span>${reactionData.dmg}</span></span>
         </div>
         <div class="card-art-wrap">
           <img src="${reactionData.art}" alt="${reactionData.cardName}" />
         </div>
-        <div class="card-stat-icons"><span class="stat-ic"><img src="assets/ui/stat_atk.png" alt="DMG" /><b>${reactionData.dmg}</b></span></div>
-        <div class="card-name-ribbon ribbon-rara"><span>${reactionData.cardName}</span></div>
+        <div class="card-footer-badge">DMG ${reactionData.dmg}</div>
       </div>
     `;
-    textEl.textContent = `Ataque rival (${reactionData.dmg} DMG). Elige una unidad tuya para bloquear o juega [REACCION].`;
+    if (fillEl) fillEl.style.width = `${(reactionData.timeLeft / 5.0) * 100}%`;
+    if (numEl) numEl.textContent = `${reactionData.timeLeft.toFixed(1)}s`;
     banner.classList.remove("hidden");
 
-    passBtn.onclick = () => {
-      window.PvpEngine.sendAction("REACTION_PASS", {});
-    };
-
-    if (!isHost) {
+    if (isDefender && !isHost) {
       if (guestReactionTimer) clearInterval(guestReactionTimer);
+      let left = reactionData.timeLeft;
       guestReactionTimer = setInterval(() => {
         if (!state.reactionWindow || state.gameOver) {
           clearInterval(guestReactionTimer);
           guestReactionTimer = null;
           return;
         }
-        state.reactionWindow.timeLeft = Math.max(0, state.reactionWindow.timeLeft - 0.1);
-        fillEl.style.width = `${(state.reactionWindow.timeLeft / 5.0) * 100}%`;
-        numEl.textContent = `${state.reactionWindow.timeLeft.toFixed(1)}s`;
+        left = Math.max(0, left - 0.1);
+        state.reactionWindow.timeLeft = left;
+        if (fillEl) fillEl.style.width = `${(left / 5.0) * 100}%`;
+        if (numEl) numEl.textContent = `${left.toFixed(1)}s`;
+      }, 100);
+    }
+
+    if (!isDefender) {
+      if (attackerWaitTimer) clearInterval(attackerWaitTimer);
+      let left = reactionData.timeLeft;
+      attackerWaitTimer = setInterval(() => {
+        if (!state.waitingReactionInfo || state.gameOver) {
+          clearInterval(attackerWaitTimer);
+          attackerWaitTimer = null;
+          return;
+        }
+        left = Math.max(0, left - 0.1);
+        if (fillEl) fillEl.style.width = `${(left / 5.0) * 100}%`;
+        if (numEl) numEl.textContent = `${left.toFixed(1)}s`;
       }, 100);
     }
   }
 
   function closePvpReactionBanner() {
     const banner = document.getElementById("reaction-banner");
+    const passBtn = document.getElementById("reaction-pass-btn");
     if (banner) banner.classList.add("hidden");
+    if (passBtn) passBtn.classList.remove("hidden");
     state.reactionWindow = null;
     if (guestReactionTimer) {
       clearInterval(guestReactionTimer);
       guestReactionTimer = null;
+    }
+    if (attackerWaitTimer) {
+      clearInterval(attackerWaitTimer);
+      attackerWaitTimer = null;
     }
   }
 
@@ -239,7 +348,7 @@
     const prevTurn = state?.isPlayerTurn;
     state = {
       ...view,
-      selectedUnitIndex: view.isPlayerTurn ? prevSelected : null,
+      selectedUnitIndex: view.isPlayerTurn && !view.pendingReactionForMe && !view.waitingReactionInfo ? prevSelected : null,
       reactionWindow: state?.reactionWindow || null
     };
 
@@ -254,22 +363,26 @@
 
     if (view.pendingReactionForMe) {
       if (!state.reactionWindow) {
-        openPvpReactionBanner(view.pendingReactionForMe, window.PvpNet.role === "host");
+        openPvpReactionBanner(view.pendingReactionForMe, true, window.PvpNet.role === "host");
       } else {
         state.reactionWindow.blockerIdx = view.pendingReactionForMe.blockerIdx;
       }
+    } else if (view.waitingReactionInfo) {
+      openPvpReactionBanner(view.waitingReactionInfo, false, window.PvpNet.role === "host");
     } else {
       closePvpReactionBanner();
     }
 
     if (view.hintText) {
       setHint(view.hintText);
-    } else if (view.waitingForRivalReaction) {
-      setHint("Esperando reaccion del rival (5s)...");
+    } else if (view.waitingReactionInfo) {
+      setHint("Ataque enviado: esperando decision del rival (5s)...");
+    } else if (view.pendingReactionForMe) {
+      setHint("Te estan atacando: elige bloqueador, juega [REACCION] o pulsa DEJAR PASAR.");
     } else if (view.isPlayerTurn) {
-      setHint("Tu turno: juega cartas, compra del Mercado Vivo o ataca.");
+      setHint("Tu turno: juega cartas, compra del Mercado Vivo o selecciona una unidad lista para atacar.");
     } else {
-      setHint("Turno del rival. Observa sus jugadas.");
+      setHint("Turno del rival. Observa sus jugadas y prepara tus cartas de [REACCION].");
     }
 
     if (view.isPlayerTurn && prevTurn === false && !view.gameOver) {
@@ -278,7 +391,10 @@
 
     render();
 
-    if (view.isPlayerTurn && !view.gameOver && !view.pendingReactionForMe && !view.waitingForRivalReaction) {
+    if (view.toast) showPvpToast(view.toast);
+    playLocalFxEvents(view.fxEvents, view.sfx);
+
+    if (view.isPlayerTurn && !view.gameOver && !view.pendingReactionForMe && !view.waitingReactionInfo) {
       if (prevTurn !== true) startTurnTimer();
     } else {
       stopTurnTimer();
@@ -300,9 +416,11 @@
   function withHostActorContext(actorSide, fn) {
     const otherSide = actorSide === "p1" ? "p2" : "p1";
     const savedState = state;
+    const fxQueue = [];
     state = {
       isPvp: true,
       _pvpInternal: true,
+      _pvpFxQueue: fxQueue,
       turn: pvpMatch.turn,
       isPlayerTurn: pvpMatch.activeSide === actorSide,
       selectedUnitIndex: null,
@@ -326,6 +444,7 @@
       }
       state = savedState;
     }
+    return fxQueue;
   }
 
   function resolvePendingReaction() {
@@ -338,47 +457,64 @@
     const defenderSide = pending.targetSide;
     const attacker = pvpMatch[attackerSide].board[pending.attackerSlotIdx];
     if (!attacker) {
-      syncBothClients();
+      syncBothClients({ actorSide: attackerSide });
       return;
     }
 
     const blockerIdx = pending.blockerIdx;
     const blocker = blockerIdx !== null ? pvpMatch[defenderSide].board[blockerIdx] : null;
+    const rawFx = [];
 
     if (blocker) {
       blocker.hp -= attacker.atk;
       attacker.hp -= blocker.atk;
       attacker.ready = false;
 
+      const defSel = `#enemy-slots .unit-slot:nth-child(${blockerIdx + 1})`;
+      const atkSel = `#player-slots .unit-slot:nth-child(${pending.attackerSlotIdx + 1})`;
+      rawFx.push(
+        { kind: "vfx", selector: defSel, cls: "vfx-slash" },
+        { kind: "shake", selector: defSel },
+        { kind: "fx", selector: defSel, text: `-${attacker.atk}`, cls: "fx-dmg" },
+        { kind: "fx", selector: atkSel, text: `-${blocker.atk}`, cls: "fx-dmg" }
+      );
+
       if (attacker.pierce && blocker.hp < 0) {
         const excess = Math.abs(blocker.hp);
-        withHostActorContext(attackerSide, () => {
-          dealDamageToHero("enemy", excess);
-        });
+        const fx = withHostActorContext(attackerSide, () => dealDamageToHero("enemy", excess));
+        rawFx.push(...fx);
       }
       if (blocker.hp <= 0) {
-        withHostActorContext(defenderSide, () => {
-          triggerUnitDeath("player", blockerIdx);
-        });
+        const fx = withHostActorContext(defenderSide, () => triggerUnitDeath("player", blockerIdx));
+        rawFx.push(...fx.map((e) => ({ ...e, selector: mirrorSelector(e.selector) })));
       }
       if (attacker.hp <= 0) {
-        withHostActorContext(attackerSide, () => {
-          triggerUnitDeath("player", pending.attackerSlotIdx);
-        });
+        const fx = withHostActorContext(attackerSide, () => triggerUnitDeath("player", pending.attackerSlotIdx));
+        rawFx.push(...fx);
       }
-      syncBothClients(
-        `${attacker.name} fue bloqueado por ${blocker.name}.`,
-        `Bloqueaste a ${attacker.name} con ${blocker.name}.`
-      );
+      syncBothClients({
+        actorSide: attackerSide,
+        rawFx,
+        sfxP1: ["attack_hit"],
+        sfxP2: ["attack_hit"],
+        hintP1: attackerSide === "p1" ? `${attacker.name} fue bloqueado por ${blocker.name}.` : `Bloqueaste a ${attacker.name} con ${blocker.name}.`,
+        hintP2: attackerSide === "p2" ? `${attacker.name} fue bloqueado por ${blocker.name}.` : `Bloqueaste a ${attacker.name} con ${blocker.name}.`
+      });
     } else {
-      withHostActorContext(attackerSide, () => {
+      const fx = withHostActorContext(attackerSide, () => {
+        spawnVfxShape("#enemy-hero-panel", "vfx-slash");
         dealDamageToHero("enemy", attacker.atk);
       });
+      rawFx.push(...fx, { kind: "shake", selector: "#enemy-hero-panel" });
       attacker.ready = false;
-      syncBothClients(
-        `${attacker.name} golpeo al Heroe por ${attacker.atk} DMG.`,
-        `${attacker.name} golpeo a tu Heroe por ${attacker.atk} DMG.`
-      );
+      syncBothClients({
+        actorSide: attackerSide,
+        rawFx,
+        sfxP1: ["attack_hit"],
+        sfxP2: ["attack_hit"],
+        hintP1: attackerSide === "p1" ? `${attacker.name} golpeo al Heroe por ${attacker.atk} DMG.` : `${attacker.name} golpeo a tu Heroe por ${attacker.atk} DMG.`,
+        hintP2: attackerSide === "p2" ? `${attacker.name} golpeo al Heroe por ${attacker.atk} DMG.` : `${attacker.name} golpeo a tu Heroe por ${attacker.atk} DMG.`
+      });
     }
   }
 
@@ -392,7 +528,7 @@
         const idx = payload.blockerIdx;
         if (pvpMatch[actorSide].board[idx]) {
           pvpMatch.pendingReaction.blockerIdx = idx;
-          syncBothClients();
+          syncBothClients({ actorSide });
         }
         return;
       }
@@ -403,10 +539,15 @@
       if (actionType === "PLAY_CARD") {
         const card = pvpMatch[actorSide].hand[payload.handIndex];
         if (!card || !card.reaction || pvpMatch[actorSide].energy < card.cost) return;
-        withHostActorContext(actorSide, () => {
-          playCard(payload.handIndex);
+        const fx = withHostActorContext(actorSide, () => playCard(payload.handIndex));
+        syncBothClients({
+          actorSide,
+          rawFx: fx,
+          sfxP1: ["play_card"],
+          sfxP2: ["play_card"],
+          toastP1: actorSide === "p2" ? { art: card.art, text: `Rival respondio con ${card.name}` } : null,
+          toastP2: actorSide === "p1" ? { art: card.art, text: `Rival respondio con ${card.name}` } : null
         });
-        syncBothClients();
         return;
       }
       return;
@@ -417,13 +558,17 @@
     if (actionType === "PLAY_CARD") {
       const card = pvpMatch[actorSide].hand[payload.handIndex];
       if (!card || pvpMatch[actorSide].energy < card.cost) return;
-      withHostActorContext(actorSide, () => {
-        playCard(payload.handIndex);
+      const fx = withHostActorContext(actorSide, () => playCard(payload.handIndex));
+      syncBothClients({
+        actorSide,
+        rawFx: fx,
+        sfxP1: ["play_card"],
+        sfxP2: ["play_card"],
+        hintP1: actorSide === "p1" ? `Jugaste ${card.name}.` : `El rival jugo ${card.name}.`,
+        hintP2: actorSide === "p2" ? `Jugaste ${card.name}.` : `El rival jugo ${card.name}.`,
+        toastP1: actorSide === "p2" ? { art: card.art, text: `El rival jugo ${card.name}` } : null,
+        toastP2: actorSide === "p1" ? { art: card.art, text: `El rival jugo ${card.name}` } : null
       });
-      syncBothClients(
-        actorSide === "p1" ? `Jugaste ${card.name}.` : `El rival jugo ${card.name}.`,
-        actorSide === "p2" ? `Jugaste ${card.name}.` : `El rival jugo ${card.name}.`
-      );
       return;
     }
 
@@ -437,10 +582,16 @@
         pvpMatch.marketDeck = shuffle(MARKET_POOL_IDS).map((id) => createCardInstance(id, true));
       }
       pvpMatch.marketRow[payload.marketIndex] = pvpMatch.marketDeck.pop();
-      syncBothClients(
-        actorSide === "p1" ? `Compraste ${card.name}.` : `El rival compro ${card.name} del Mercado.`,
-        actorSide === "p2" ? `Compraste ${card.name}.` : `El rival compro ${card.name} del Mercado.`
-      );
+      syncBothClients({
+        actorSide,
+        rawFx: [{ kind: "fx", selector: "#player-hand", text: "+1 CARTA", cls: "fx-gold" }],
+        sfxP1: ["draw_card"],
+        sfxP2: ["draw_card"],
+        hintP1: actorSide === "p1" ? `Compraste ${card.name}.` : `El rival compro ${card.name} del Mercado.`,
+        hintP2: actorSide === "p2" ? `Compraste ${card.name}.` : `El rival compro ${card.name} del Mercado.`,
+        toastP1: actorSide === "p2" ? { art: card.art, text: `El rival compro ${card.name}` } : null,
+        toastP2: actorSide === "p1" ? { art: card.art, text: `El rival compro ${card.name}` } : null
+      });
       return;
     }
 
@@ -453,23 +604,36 @@
       attacker.hp -= defender.atk;
       attacker.ready = false;
 
+      const defSel = `#enemy-slots .unit-slot:nth-child(${payload.enemySlotIndex + 1})`;
+      const atkSel = `#player-slots .unit-slot:nth-child(${payload.attackerIdx + 1})`;
+      const rawFx = [
+        { kind: "vfx", selector: defSel, cls: "vfx-slash" },
+        { kind: "shake", selector: defSel },
+        { kind: "fx", selector: defSel, text: `-${attacker.atk}`, cls: "fx-dmg" },
+        { kind: "fx", selector: atkSel, text: `-${defender.atk}`, cls: "fx-dmg" }
+      ];
+
       if (attacker.pierce && defender.hp < 0) {
         const excess = Math.abs(defender.hp);
-        withHostActorContext(actorSide, () => {
-          dealDamageToHero("enemy", excess);
-        });
+        const fx = withHostActorContext(actorSide, () => dealDamageToHero("enemy", excess));
+        rawFx.push(...fx);
       }
       if (defender.hp <= 0) {
-        withHostActorContext(otherSide, () => {
-          triggerUnitDeath("player", payload.enemySlotIndex);
-        });
+        const fx = withHostActorContext(otherSide, () => triggerUnitDeath("player", payload.enemySlotIndex));
+        rawFx.push(...fx.map((e) => ({ ...e, selector: mirrorSelector(e.selector) })));
       }
       if (attacker.hp <= 0) {
-        withHostActorContext(actorSide, () => {
-          triggerUnitDeath("player", payload.attackerIdx);
-        });
+        const fx = withHostActorContext(actorSide, () => triggerUnitDeath("player", payload.attackerIdx));
+        rawFx.push(...fx);
       }
-      syncBothClients("Combate de unidades resuelto.", "Combate de unidades resuelto.");
+      syncBothClients({
+        actorSide,
+        rawFx,
+        sfxP1: ["attack_hit"],
+        sfxP2: ["attack_hit"],
+        hintP1: "Combate de unidades resuelto.",
+        hintP2: "Combate de unidades resuelto."
+      });
       return;
     }
 
@@ -477,23 +641,37 @@
       const attacker = pvpMatch[actorSide].board[payload.attackerIdx];
       if (!attacker || !attacker.ready) return;
       const hasGuard = !attacker.stealth && pvpMatch[otherSide].board.some((u) => u && u.guard && !u.stunned);
-      if (hasGuard) return;
+      if (hasGuard) {
+        syncBothClients({
+          actorSide,
+          sfxP1: actorSide === "p1" ? ["invalid_action"] : [],
+          sfxP2: actorSide === "p2" ? ["invalid_action"] : [],
+          hintP1: actorSide === "p1" ? "Una unidad rival con [GUARDIA] bloquea el ataque directo al Heroe." : "",
+          hintP2: actorSide === "p2" ? "Una unidad rival con [GUARDIA] bloquea el ataque directo al Heroe." : ""
+        });
+        return;
+      }
 
       if (attacker.stealth) {
-        withHostActorContext(actorSide, () => {
+        const fx = withHostActorContext(actorSide, () => {
+          spawnVfxShape("#enemy-hero-panel", "vfx-slash");
           dealDamageToHero("enemy", attacker.atk);
         });
         attacker.ready = false;
-        syncBothClients(
-          `${attacker.name} (Sigilo) golpeo al Heroe por ${attacker.atk} DMG.`,
-          `${attacker.name} (Sigilo) golpeo a tu Heroe por ${attacker.atk} DMG.`
-        );
+        syncBothClients({
+          actorSide,
+          rawFx: fx,
+          sfxP1: ["attack_hit"],
+          sfxP2: ["attack_hit"],
+          hintP1: actorSide === "p1" ? `${attacker.name} (Sigilo) golpeo al Heroe por ${attacker.atk} DMG.` : `${attacker.name} (Sigilo) golpeo a tu Heroe por ${attacker.atk} DMG.`,
+          hintP2: actorSide === "p2" ? `${attacker.name} (Sigilo) golpeo al Heroe por ${attacker.atk} DMG.` : `${attacker.name} (Sigilo) golpeo a tu Heroe por ${attacker.atk} DMG.`
+        });
         return;
       }
 
       const defaultGuardIdx = pvpMatch[otherSide].board.findIndex((u) => u && u.guard && !u.stunned);
       pvpMatch.pendingReaction = {
-        attackerSide,
+        attackerSide: actorSide,
         targetSide: otherSide,
         attackerSlotIdx: payload.attackerIdx,
         dmg: attacker.atk,
@@ -502,7 +680,13 @@
         blockerIdx: defaultGuardIdx !== -1 ? defaultGuardIdx : null,
         timeLeft: 5.0
       };
-      syncBothClients();
+      syncBothClients({
+        actorSide,
+        sfxP1: ["hover_card"],
+        sfxP2: ["hover_card"],
+        toastP1: actorSide === "p2" ? { art: attacker.art, text: `${attacker.name} ataca a tu Heroe (${attacker.atk} DMG)!` } : null,
+        toastP2: actorSide === "p1" ? { art: attacker.art, text: `${attacker.name} ataca a tu Heroe (${attacker.atk} DMG)!` } : null
+      });
 
       clearReactionTimers();
       hostReactionTimer = setInterval(() => {
@@ -511,12 +695,10 @@
           return;
         }
         pvpMatch.pendingReaction.timeLeft = Math.max(0, pvpMatch.pendingReaction.timeLeft - 0.1);
-        if (pvpMatch.pendingReaction.targetSide === "p1") {
-          const fillEl = document.getElementById("reaction-timer-fill");
-          const numEl = document.getElementById("reaction-timer-num");
-          if (fillEl) fillEl.style.width = `${(pvpMatch.pendingReaction.timeLeft / 5.0) * 100}%`;
-          if (numEl) numEl.textContent = `${pvpMatch.pendingReaction.timeLeft.toFixed(1)}s`;
-        }
+        const fillEl = document.getElementById("reaction-timer-fill");
+        const numEl = document.getElementById("reaction-timer-num");
+        if (fillEl) fillEl.style.width = `${(pvpMatch.pendingReaction.timeLeft / 5.0) * 100}%`;
+        if (numEl) numEl.textContent = `${pvpMatch.pendingReaction.timeLeft.toFixed(1)}s`;
         if (pvpMatch.pendingReaction.timeLeft <= 0) {
           resolvePendingReaction();
         }
@@ -525,10 +707,12 @@
     }
 
     if (actionType === "END_TURN") {
+      // Discard remaining hand and IMMEDIATELY draw 5 fresh cards so player has a hand during rival's turn
       while (pvpMatch[actorSide].hand.length > 0) {
         const c = pvpMatch[actorSide].hand.pop();
         if (!c.ephemeral) pvpMatch[actorSide].discard.push(c);
       }
+      drawForSide(pvpMatch[actorSide], 5);
 
       pvpMatch.activeSide = otherSide;
       if (otherSide === "p1") pvpMatch.turn += 1;
@@ -556,8 +740,11 @@
         }
       });
 
-      drawForSide(nextPlayer, 5);
-      syncBothClients();
+      syncBothClients({
+        actorSide,
+        sfxP1: ["draw_card"],
+        sfxP2: ["draw_card"]
+      });
     }
   }
 
@@ -593,10 +780,11 @@
     document.getElementById("rest-screen")?.classList.add("hidden");
     document.querySelector(".main-stage")?.style.setProperty("--arena-bg", 'url("assets/ui/arena_bg.png")');
 
-    syncBothClients(
-      "Duelo iniciado. Tu empiezas primero.",
-      "Duelo iniciado. Turno del Jugador 1 (+1 Oro inicial por ir segundo)."
-    );
+    syncBothClients({
+      actorSide: "p1",
+      hintP1: "Duelo iniciado. Tu empiezas primero.",
+      hintP2: "Duelo iniciado. Turno del Jugador 1 (+1 Oro inicial por ir segundo)."
+    });
   }
 
   // ================= LOBBY UI (REUSING OFFICIAL FACTION PILLARS & CARDS) =================

@@ -938,6 +938,9 @@ function shuffle(arr) {
 }
 
 function spawnFx(selector, text, cls) {
+  if (state && Array.isArray(state._pvpFxQueue)) {
+    state._pvpFxQueue.push({ kind: "fx", selector, text, cls });
+  }
   const target = document.querySelector(selector);
   const layer = document.getElementById("fx-layer");
   if (!target || !layer) return;
@@ -952,6 +955,9 @@ function spawnFx(selector, text, cls) {
 }
 
 function spawnVfxShape(selector, cls) {
+  if (state && Array.isArray(state._pvpFxQueue)) {
+    state._pvpFxQueue.push({ kind: "vfx", selector, cls });
+  }
   const target = document.querySelector(selector);
   const layer = document.getElementById("fx-layer");
   if (!target || !layer) return;
@@ -1663,18 +1669,106 @@ function buyMarketCard(marketIndex) {
   window.FTUE?.onMarketBought(state);
 }
 
+function getAttackArrowOrigin(slotIndex) {
+  const el = document.querySelector(`#player-slots .unit-slot:nth-child(${slotIndex + 1}) .unit-token`);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height * 0.35 };
+}
+
+function hideAttackArrow() {
+  const svg = document.getElementById("attack-arrow-svg");
+  if (svg) {
+    svg.classList.add("hidden");
+    svg.classList.remove("target-valid", "target-blocked");
+  }
+}
+
+function updateAttackArrow(clientX, clientY, targetEl) {
+  const svg = document.getElementById("attack-arrow-svg");
+  const pathEl = document.getElementById("attack-arrow-path");
+  const glowEl = document.getElementById("attack-arrow-glow");
+  if (!svg || !pathEl || !glowEl || state.selectedUnitIndex === null) {
+    hideAttackArrow();
+    return;
+  }
+  const origin = getAttackArrowOrigin(state.selectedUnitIndex);
+  if (!origin) {
+    hideAttackArrow();
+    return;
+  }
+  const cx = (origin.x + clientX) / 2;
+  const cy = Math.min(origin.y, clientY) - 65;
+  const d = `M ${origin.x} ${origin.y} Q ${cx} ${cy} ${clientX} ${clientY}`;
+  pathEl.setAttribute("d", d);
+  glowEl.setAttribute("d", d);
+
+  svg.classList.remove("hidden", "target-valid", "target-blocked");
+  if (targetEl) {
+    const enemyUnit = targetEl.closest("#enemy-slots .unit-token.targetable");
+    const enemyHero = targetEl.closest("#enemy-hero-panel");
+    if (enemyUnit) {
+      svg.classList.add("target-valid");
+    } else if (enemyHero) {
+      const attacker = state.player.board[state.selectedUnitIndex];
+      const hasGuard = !attacker?.stealth && state.enemy.board.some((u) => u && u.guard && !u.stunned);
+      svg.classList.add(hasGuard ? "target-blocked" : "target-valid");
+    }
+  }
+}
+
+let ignoreNextDocumentClick = false;
+
+document.addEventListener("mousemove", (e) => {
+  if (state?.selectedUnitIndex !== null && state?.isPlayerTurn && !state?.gameOver) {
+    updateAttackArrow(e.clientX, e.clientY, e.target);
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (ignoreNextDocumentClick) {
+    ignoreNextDocumentClick = false;
+    return;
+  }
+  if (state?.selectedUnitIndex === null || !state?.isPlayerTurn || state?.gameOver) return;
+  const inPlayerUnit = e.target.closest("#player-slots .unit-token");
+  const inEnemyUnit = e.target.closest("#enemy-slots .unit-token");
+  const inEnemyHero = e.target.closest("#enemy-hero-panel");
+  if (!inPlayerUnit && !inEnemyUnit && !inEnemyHero) {
+    state.selectedUnitIndex = null;
+    hideAttackArrow();
+    setHint("Ataque cancelado.");
+    render();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && state?.selectedUnitIndex !== null) {
+    state.selectedUnitIndex = null;
+    hideAttackArrow();
+    setHint("Ataque cancelado.");
+    render();
+  }
+});
+
 function selectPlayerUnit(slotIndex) {
   if (!state.isPlayerTurn || state.gameOver) return;
   const unit = state.player.board[slotIndex];
   if (!unit || !unit.ready) return;
 
+  ignoreNextDocumentClick = true;
+  setTimeout(() => { ignoreNextDocumentClick = false; }, 0);
+
   window.SFX?.play("hover_card");
   if (state.selectedUnitIndex === slotIndex) {
     state.selectedUnitIndex = null;
+    hideAttackArrow();
     setHint("Seleccion cancelada.");
   } else {
     state.selectedUnitIndex = slotIndex;
-    setHint(`Unidad ${unit.name} lista: haz clic en una unidad rival o en el Heroe rival.`);
+    setHint(`Unidad ${unit.name} lista: apunta con la flecha a una unidad rival o al Heroe rival (clic fuera para cancelar).`);
+    const origin = getAttackArrowOrigin(slotIndex);
+    if (origin) updateAttackArrow(origin.x, origin.y - 70, null);
   }
   render();
 }
@@ -1719,6 +1813,7 @@ function triggerUnitDeath(side, slotIndex) {
 
 function attackEnemyUnit(enemySlotIndex) {
   if (state.selectedUnitIndex === null || !state.isPlayerTurn || state.gameOver) return;
+  hideAttackArrow();
   if (state.isPvp && !state._pvpInternal) {
     const attackerIdx = state.selectedUnitIndex;
     state.selectedUnitIndex = null;
@@ -1763,16 +1858,19 @@ function attackEnemyUnit(enemySlotIndex) {
 
 function attackEnemyHero() {
   if (state.selectedUnitIndex === null || !state.isPlayerTurn || state.gameOver) return;
+  const attacker = state.player.board[state.selectedUnitIndex];
+  const hasGuard = !attacker?.stealth && state.enemy.board.some((u) => u && u.guard && !u.stunned);
+  if (hasGuard) {
+    window.SFX?.play("invalid_action");
+    spawnFx("#enemy-hero-panel", "BLOQUEADO POR GUARDIA", "fx-shd");
+    setHint("Una unidad rival con [GUARDIA] bloquea el ataque directo al Heroe.");
+    return;
+  }
+  hideAttackArrow();
   if (state.isPvp && !state._pvpInternal) {
     const attackerIdx = state.selectedUnitIndex;
     state.selectedUnitIndex = null;
     window.PvpEngine?.sendAction("ATTACK_HERO", { attackerIdx });
-    return;
-  }
-  const attacker = state.player.board[state.selectedUnitIndex];
-  const hasGuard = !attacker?.stealth && state.enemy.board.some((u) => u && u.guard && !u.stunned);
-  if (hasGuard) {
-    setHint("Una unidad rival con [GUARDIA] bloquea el ataque directo al Heroe.");
     return;
   }
   window.FTUE?.onUnitAttacked();
@@ -1829,6 +1927,7 @@ function rollEnemyIntention() {
 
 function endTurn() {
   if (!state.isPlayerTurn || state.gameOver) return;
+  hideAttackArrow();
   if (state.isPvp && !state._pvpInternal) {
     window.PvpEngine?.sendAction("END_TURN", {});
     return;
@@ -2225,8 +2324,9 @@ function render() {
       slot.textContent = "VACIO";
     } else {
       const targetable = state.selectedUnitIndex !== null;
+      const isPvpAttacking = state.isPvp && state.pvpAttackingEnemySlot === idx;
       const token = document.createElement("div");
-      token.className = `unit-token enemy-unit ${targetable ? "targetable" : ""} ${unit.stunned ? "stunned" : ""}`;
+      token.className = `unit-token enemy-unit ${targetable ? "targetable" : ""} ${unit.stunned ? "stunned" : ""} ${isPvpAttacking ? "pvp-attacking" : ""}`;
       const enemyBadges = [];
       if (unit.guard) enemyBadges.push('<span class="badge-icon" title="GUARDIA"><img src="assets/ui/badge_guard.png" alt="Guardia" /></span>');
       if (unit.stunned) enemyBadges.push('<span class="side-badge stunned" title="ATURDIDA: No ataca ni protege">ATURDIDA</span>');

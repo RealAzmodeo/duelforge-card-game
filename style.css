@@ -4922,3 +4922,115 @@ body {
   justify-content: flex-end;
   margin-top: 8px;
 }
+
+
+/* ================= ATTACK TARGETING ARROW & LIVE PVP FEEDBACK ================= */
+.attack-arrow-svg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 190;
+  color: #fbbf24;
+  overflow: visible;
+}
+
+.attack-arrow-svg.hidden {
+  display: none;
+}
+
+.attack-arrow-svg.target-valid {
+  color: #ff3b5c;
+}
+
+.attack-arrow-svg.target-blocked {
+  color: #64748b;
+}
+
+.attack-arrow-glow {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 10px;
+  stroke-linecap: round;
+  opacity: 0.25;
+  filter: blur(4px);
+}
+
+.attack-arrow-path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4.5px;
+  stroke-linecap: round;
+  stroke-dasharray: 12 8;
+  animation: arrowFlow 0.55s linear infinite;
+}
+
+@keyframes arrowFlow {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.pvp-action-toast {
+  position: fixed;
+  top: 78px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 195;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: linear-gradient(180deg, rgba(20, 27, 45, 0.96) 0%, rgba(9, 13, 22, 0.98) 100%);
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.78), 0 0 22px rgba(251, 191, 36, 0.28);
+  color: #f8fafc;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+  animation: toastPop 0.22s ease-out;
+}
+
+.pvp-action-toast.hidden {
+  display: none;
+}
+
+.pvp-action-toast img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #475569;
+}
+
+@keyframes toastPop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.unit-token.pvp-attacking {
+  transform: translateY(8px) scale(1.08);
+  filter: drop-shadow(0 0 18px #ff2e55);
+  animation: attackerPulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes attackerPulse {
+  from {
+    filter: drop-shadow(0 0 12px #ff2e55);
+  }
+  to {
+    filter: drop-shadow(0 0 24px #fbbf24);
+  }
+}
