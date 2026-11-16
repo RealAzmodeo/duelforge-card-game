@@ -114,6 +114,7 @@
             <button id="open-map-btn" class="sfx-mute-btn" type="button" title="Ver mapa de ruta">MAPA</button>
             <button id="sfx-mute-btn" class="sfx-mute-btn" type="button" title="Activar o silenciar efectos de sonido">SFX: ON</button>
             <button id="auto-battle-btn" class="auto-battle-btn" type="button" title="Activar IA tactica automatica en combate">AUTO: OFF</button>
+            <button id="ftue-help-btn" class="sfx-mute-btn ftue-help-btn" type="button" title="Guia rapida de reglas">?</button>
           </div>
         </div>
       </header>
@@ -338,57 +339,62 @@
     </div>
   </div>
 
-  <!-- VS Online Lobby & 5 Deck Slots Modal -->
-  <div id="vs-lobby-modal" class="modal hidden">
-    <div class="modal-card vs-lobby-card">
-      <div class="vs-lobby-header">
+  <!-- VS Online Lobby & 5 Faction Heroes Screen (Matches Deck Select Style) -->
+  <div id="vs-lobby-modal" class="deck-select-screen hidden">
+    <div class="deck-select-wrap">
+      <div class="deck-select-header">
         <div>
           <h2>DUELO VS ONLINE</h2>
-          <p class="vs-lobby-sub">Conecta dos navegadores por codigo de sala y elige 1 de los 5 decks iniciales.</p>
+          <p class="deck-select-sub">Crea o unete a una sala con codigo y elige tu Heroe de Faccion.</p>
         </div>
-        <button id="vs-back-btn" class="reaction-pass-btn" type="button">VOLVER</button>
+        <div class="deck-select-header-actions">
+          <button id="vs-back-btn" class="game-plate-btn plate-blue" type="button">VOLVER</button>
+        </div>
       </div>
 
-      <div class="vs-connect-grid">
-        <div class="vs-connect-box">
-          <div class="vs-box-title">CREAR SALA</div>
-          <p class="vs-box-desc">Genera un codigo corto y compartelo con tu rival.</p>
+      <div class="vs-connect-strip">
+        <div class="vs-connect-card">
+          <span class="vs-connect-label">CREAR SALA</span>
           <div class="vs-create-row">
-            <button id="vs-create-btn" class="btn-game vs-btn-sm" type="button">CREAR SALA</button>
+            <button id="vs-create-btn" class="game-plate-btn plate-emerald" type="button">CREAR SALA</button>
             <div id="vs-room-badge" class="vs-room-badge hidden">
-              <span class="vs-room-label">CODIGO:</span>
+              <span class="vs-room-label">CODIGO</span>
               <strong id="vs-room-code">----</strong>
-              <button id="vs-copy-btn" class="vs-copy-btn" type="button">COPIAR</button>
+              <button id="vs-copy-btn" class="game-plate-btn plate-slate vs-copy-plate" type="button">COPIAR</button>
             </div>
           </div>
         </div>
 
-        <div class="vs-connect-box">
-          <div class="vs-box-title">UNIRSE A SALA</div>
-          <p class="vs-box-desc">Escribe el codigo de 4 caracteres que te dio tu rival.</p>
+        <div class="vs-connect-card">
+          <span class="vs-connect-label">UNIRSE A SALA</span>
           <div class="vs-join-row">
             <input id="vs-join-input" class="vs-join-input" type="text" maxlength="8" placeholder="EJ. A7K2" autocomplete="off" />
-            <button id="vs-join-btn" class="btn-game vs-btn-sm" type="button">UNIRSE</button>
+            <button id="vs-join-btn" class="game-plate-btn plate-amber" type="button">UNIRSE</button>
           </div>
         </div>
-      </div>
 
-      <div id="vs-status-bar" class="vs-status-bar">
-        <span id="vs-status-text">Elige Crear Sala o Unirse a Sala para conectar.</span>
-        <span id="vs-rival-pill" class="vs-rival-pill">RIVAL: DESCONECTADO</span>
-      </div>
-
-      <div class="vs-decks-section">
-        <div class="vs-decks-head">
-          <span>ELIGE TU SLOT DE DECK INICIAL (1 DE 5)</span>
-          <span id="vs-selected-deck-name" class="vs-selected-deck-name">Vanguardia Clasica</span>
+        <div class="vs-status-card">
+          <span id="vs-status-text" class="vs-status-text">Elige Crear Sala o Unirse a Sala para conectar.</span>
+          <span id="vs-rival-pill" class="vs-rival-pill">RIVAL: DESCONECTADO</span>
         </div>
-        <div id="vs-deck-slots" class="vs-deck-slots"></div>
-        <div id="vs-deck-preview" class="vs-deck-preview"></div>
       </div>
 
-      <div class="vs-lobby-footer">
-        <button id="vs-ready-btn" class="play-hero-btn vs-ready-btn" type="button" disabled>ESPERANDO CONEXION...</button>
+      <div id="vs-deck-slots" class="deck-selector"></div>
+
+      <div id="vs-deck-detail-panel" class="deck-detail-panel">
+        <div class="deck-detail-head">
+          <div class="deck-detail-title-row">
+            <h3 id="vs-detail-name">FORJA DE HIERRO</h3>
+            <span id="vs-detail-tag" class="deck-choice-tag faction-tag faction-forja">TANQUE / EQUIPOS</span>
+            <span id="vs-detail-count" class="map-stat-pill">10 CARTAS</span>
+          </div>
+          <p id="vs-detail-desc" class="deck-detail-desc"></p>
+        </div>
+        <div id="vs-deck-preview" class="deck-detail-cards"></div>
+      </div>
+
+      <div class="deck-select-footer">
+        <button id="vs-ready-btn" class="play-hero-btn" type="button" disabled>ESPERANDO CONEXION...</button>
       </div>
     </div>
   </div>
@@ -492,13 +498,59 @@
   <!-- Floating Card Anatomy Inspector (Hover in Deck Select & Collection) -->
   <div id="card-hover-inspector" class="card-hover-inspector hidden"></div>
 
+  <!-- FTUE Spotlight & Micro-Tooltip Overlay -->
+  <div id="ftue-overlay" class="ftue-overlay hidden" aria-live="polite">
+    <div id="ftue-spotlight" class="ftue-spotlight"></div>
+    <div id="ftue-popover" class="ftue-popover">
+      <div class="ftue-popover-head">
+        <span id="ftue-badge" class="ftue-badge">GUIA RAPIDA</span>
+        <button id="ftue-skip-btn" class="ftue-skip-btn" type="button">Saltarse explicacion</button>
+      </div>
+      <p id="ftue-text" class="ftue-text"></p>
+      <div class="ftue-popover-actions">
+        <button id="ftue-ok-btn" class="ftue-ok-btn hidden" type="button">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FTUE Quick Reference Cheatsheet Modal -->
+  <div id="ftue-cheatsheet-modal" class="modal hidden">
+    <div class="modal-card ftue-cheatsheet-card">
+      <div class="inventory-header">
+        <h2>GUIA RAPIDA DE DUELFORGE</h2>
+        <button id="ftue-cheatsheet-close" class="reaction-pass-btn" type="button">CERRAR</button>
+      </div>
+      <div class="ftue-cheat-grid">
+        <div class="ftue-cheat-item">
+          <div class="ftue-cheat-title">1. ENERGIA Y MANO</div>
+          <p>Tienes 3 de Energia cada turno para jugar cartas de tu mano. Robas 5 cartas nuevas al empezar tu turno.</p>
+        </div>
+        <div class="ftue-cheat-item">
+          <div class="ftue-cheat-title">2. ORO Y MERCADO VIVO</div>
+          <p>El Oro generado en combate compra cartas del Mercado a la derecha. Van directo a tu mano solo por ese combate.</p>
+        </div>
+        <div class="ftue-cheat-item">
+          <div class="ftue-cheat-title">3. UNIDADES Y GUARDIA</div>
+          <p>Las unidades esperan 1 turno para atacar (salvo Prisa). Las unidades con Guardia protegen a tu Heroe.</p>
+        </div>
+        <div class="ftue-cheat-item">
+          <div class="ftue-cheat-title">4. BLOQUEO Y REACCION</div>
+          <p>Cuando el rival ataca tienes 5s: haz clic en una unidad tuya para bloquear, juega [REACCION] o pulsa Dejar Pasar.</p>
+        </div>
+      </div>
+      <div class="ftue-cheat-footer">
+        <button id="ftue-cheatsheet-restart" class="game-plate-btn plate-amber" type="button">Reiniciar guia paso a paso</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="sfx-presets.js"></script>
   <script src="sfx-engine.js"></script>
   <script src="cards_data.js"></script>
-  <script src="decks_data.js"></script>
   <script src="collection_system.js?v=map10"></script>
   <script src="map_system.js?v=map10"></script>
+  <script src="ftue.js?v=1"></script>
   <script src="pvp-net.js"></script>
   <script src="game.js?v=map10"></script>
   <script src="pvp-engine.js"></script>

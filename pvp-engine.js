@@ -1,10 +1,8 @@
-// Duelforge - Motor de Duelo VS Online (Host-Authoritative sobre PeerJS) + Lobby de 5 Slots
+// Duelforge - Motor de Duelo VS Online (Host-Authoritative sobre PeerJS) + Selector Oficial de Facciones
 
 (function () {
-  const PVP_TURN_DURATION = 35;
-
   const lobby = {
-    selectedDeckId: (window.STARTER_DECKS && window.STARTER_DECKS[0]?.id) || "vanguardia",
+    selectedDeckId: "forja",
     myReady: false,
     rivalReady: false,
     rivalDeckId: null,
@@ -23,6 +21,7 @@
       name: card.name,
       type: card.type,
       rarity: card.rarity,
+      faction: card.faction || "neutral",
       art: card.art,
       cost: card.cost,
       goldCost: card.goldCost,
@@ -63,15 +62,18 @@
   }
 
   function createPvpSide(deckId, label) {
-    const deckDef = window.getStarterDeckById ? window.getStarterDeckById(deckId) : null;
-    const cardIds = deckDef ? deckDef.cards : ["golpe", "golpe", "golpe", "golpe", "escudo", "escudo", "escudo", "mercenario", "mercenario", "moneda"];
-    const deck = shuffle(cardIds).map((id) => createCardInstance(id, false));
+    const id = STARTER_DECKS[deckId] ? deckId : "forja";
+    const deckDef = STARTER_DECKS[id];
+    const heroDef = FACTION_HEROES[id];
+    const deck = shuffle(deckDef.cards).map((cid) => createCardInstance(cid, false));
     return {
-      name: label + (deckDef ? ` (${deckDef.name})` : ""),
-      avatar: "assets/heroes/player_hero.png",
-      cardBack: "assets/ui/card_back_enemy.png",
-      hp: 30,
-      maxHp: 30,
+      factionId: id,
+      name: `${label} - ${heroDef.name}`,
+      avatar: `assets/heroes/hero_${id}_${heroDef.id}.png`,
+      frame: heroDef.frame || "assets/ui/portrait_frame_gold.png",
+      cardBack: `assets/card_backs/back_${id}.png`,
+      hp: heroDef.hp,
+      maxHp: heroDef.hp,
       armor: 0,
       energy: 3,
       maxEnergy: 3,
@@ -118,6 +120,10 @@
       pendingReactionForMe: reactionForMe,
       waitingForRivalReaction: Boolean(pvpMatch.pendingReaction && !reactionForMe),
       player: {
+        name: me.name,
+        avatar: me.avatar,
+        frame: me.frame,
+        cardBack: me.cardBack,
         hp: me.hp,
         maxHp: me.maxHp,
         armor: me.armor,
@@ -131,8 +137,9 @@
       },
       enemy: {
         name: rival.name,
-        avatar: "assets/heroes/enemy_hero.png",
-        cardBack: "assets/ui/card_back_enemy.png",
+        avatar: rival.avatar,
+        frame: rival.frame,
+        cardBack: rival.cardBack,
         hp: rival.hp,
         maxHp: rival.maxHp,
         armor: rival.armor,
@@ -233,6 +240,15 @@
       selectedUnitIndex: view.isPlayerTurn ? prevSelected : null,
       reactionWindow: state?.reactionWindow || null
     };
+
+    const playerAvatar = document.querySelector("#player-avatar-btn img:first-child");
+    const playerFrame = document.getElementById("player-frame-img");
+    const enemyFrame = document.getElementById("enemy-frame-img");
+    const playerDeckImg = document.querySelector("#player-deck-pile img");
+    if (playerAvatar && view.player?.avatar) playerAvatar.src = view.player.avatar;
+    if (playerFrame && view.player?.frame) playerFrame.src = view.player.frame;
+    if (playerDeckImg && view.player?.cardBack) playerDeckImg.src = view.player.cardBack;
+    if (enemyFrame && view.enemy?.frame) enemyFrame.src = view.enemy.frame;
 
     if (view.pendingReactionForMe) {
       if (!state.reactionWindow) {
@@ -507,7 +523,6 @@
     }
 
     if (actionType === "END_TURN") {
-      // Discard remaining hand at end of turn
       while (pvpMatch[actorSide].hand.length > 0) {
         const c = pvpMatch[actorSide].hand.pop();
         if (!c.ephemeral) pvpMatch[actorSide].discard.push(c);
@@ -519,7 +534,6 @@
       const nextPlayer = pvpMatch[otherSide];
       nextPlayer.energy = nextPlayer.maxEnergy;
 
-      // Upkeep & ready units
       nextPlayer.board.forEach((u, idx) => {
         if (!u) return;
         if (u.upkeep && u.upkeep > 0) {
@@ -548,7 +562,7 @@
   function startMatchAsHost() {
     clearReactionTimers();
     const p1 = createPvpSide(lobby.selectedDeckId, "JUGADOR 1");
-    const p2 = createPvpSide(lobby.rivalDeckId || "vanguardia", "JUGADOR 2");
+    const p2 = createPvpSide(lobby.rivalDeckId || "forja", "JUGADOR 2");
     const marketPool = shuffle(MARKET_POOL_IDS).map((id) => createCardInstance(id, true));
     const marketRow = [];
     for (let i = 0; i < 4; i++) {
@@ -557,7 +571,6 @@
 
     drawForSide(p1, 5);
     drawForSide(p2, 5);
-    // Slight compensation for Player 2 going second
     p2.gold = 1;
 
     pvpMatch = {
@@ -576,31 +589,102 @@
     document.getElementById("title-screen")?.classList.add("hidden");
     document.getElementById("game-over-modal")?.classList.add("hidden");
     document.getElementById("rest-screen")?.classList.add("hidden");
-    document.querySelector(".main-stage")?.style.setProperty("--arena-bg", 'url("assets/backgrounds/arena_bg.png")');
+    document.querySelector(".main-stage")?.style.setProperty("--arena-bg", 'url("assets/ui/arena_bg.png")');
 
-    syncBothClients("Duelo iniciado. Tu empiezas primero.", "Duelo iniciado. Turno del Jugador 1 (+1 Oro inicial por ir segundo).");
+    syncBothClients(
+      "Duelo iniciado. Tu empiezas primero.",
+      "Duelo iniciado. Turno del Jugador 1 (+1 Oro inicial por ir segundo)."
+    );
   }
 
-  // ================= LOBBY UI =================
+  // ================= LOBBY UI (REUSING OFFICIAL FACTION PILLARS & CARDS) =================
+  function renderVsDeckDetail(deckIdOverride) {
+    const id = deckIdOverride || lobby.selectedDeckId;
+    const deck = STARTER_DECKS[id] || STARTER_DECKS.forja;
+    const f = FACTIONS[deck.id];
+    const nameEl = document.getElementById("vs-detail-name");
+    const tagEl = document.getElementById("vs-detail-tag");
+    const countEl = document.getElementById("vs-detail-count");
+    const descEl = document.getElementById("vs-detail-desc");
+    const cardsEl = document.getElementById("vs-deck-preview");
+    if (!nameEl || !cardsEl) return;
+
+    nameEl.textContent = deck.name;
+    if (tagEl && f) {
+      tagEl.textContent = f.tag;
+      tagEl.className = `deck-choice-tag faction-tag faction-${deck.id}`;
+    }
+    if (countEl) countEl.textContent = `${deck.cards.length} CARTAS`;
+    if (descEl && f) descEl.textContent = `${f.desc} (${deck.archetype})`;
+
+    const counts = {};
+    deck.cards.forEach((cid) => {
+      counts[cid] = (counts[cid] || 0) + 1;
+    });
+
+    cardsEl.innerHTML = "";
+    Object.entries(counts).forEach(([cid, qty]) => {
+      const card = CARD_CATALOG[cid];
+      if (!card) return;
+      const item = document.createElement("div");
+      item.className = "deck-detail-card-item";
+      const cardEl = createVisualCardEl(card);
+      const qtyEl = document.createElement("span");
+      qtyEl.className = "info-plaque deck-detail-qty";
+      qtyEl.textContent = `X${qty}`;
+      item.appendChild(cardEl);
+      item.appendChild(qtyEl);
+      attachCardHoverInspector(item, card);
+      cardsEl.appendChild(item);
+    });
+  }
+
   function renderDeckSlots() {
     const slotsEl = document.getElementById("vs-deck-slots");
-    const previewEl = document.getElementById("vs-deck-preview");
-    const nameEl = document.getElementById("vs-selected-deck-name");
-    if (!slotsEl || !previewEl) return;
+    if (!slotsEl || typeof STARTER_DECKS === "undefined") return;
 
-    const decks = window.STARTER_DECKS || [];
     slotsEl.innerHTML = "";
-    decks.forEach((deck, idx) => {
+    Object.values(STARTER_DECKS).forEach((deck) => {
+      const f = FACTIONS[deck.id];
+      const h = FACTION_HEROES[deck.id];
+      const heroArt = `assets/heroes/hero_${deck.id}_${h.id}.png`;
+
+      const counts = {};
+      deck.cards.forEach((cid) => {
+        counts[cid] = (counts[cid] || 0) + 1;
+      });
+      const hoverRows = Object.entries(counts)
+        .map(([cid, qty]) => {
+          const c = CARD_CATALOG[cid];
+          if (!c) return "";
+          return `<div class="deck-hover-card-row"><img src="${c.art}" alt="" /><span>${c.name}</span><b>x${qty}</b></div>`;
+        })
+        .join("");
+
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = `vs-deck-slot ${deck.id === lobby.selectedDeckId ? "active" : ""}`;
-      btn.style.setProperty("--slot-accent", deck.accent);
+      btn.dataset.faction = deck.id;
+      btn.className = `deck-choice-card ${lobby.selectedDeckId === deck.id ? "selected" : ""}`;
       btn.innerHTML = `
-        <span class="vs-slot-num">SLOT ${idx + 1}</span>
-        <span class="vs-slot-name">${deck.name}</span>
-        <span class="vs-slot-arch">${deck.archetype}</span>
-        <span class="vs-slot-tag">${deck.tagline}</span>
+        <img class="deck-hero-bg" src="${heroArt}" alt="${h.name}" />
+        <div class="deck-hero-fade"></div>
+        <div class="deck-pillar-top">
+          <span class="deck-archetype-text">${f.tag}</span>
+          <span class="deck-hp-text"><img class="deck-hp-ic" src="assets/ui/stat_hp.png" alt="" />${h.hp}</span>
+        </div>
+        <div class="deck-pillar-bottom">
+          <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
+          <span class="deck-choice-name">${deck.name}</span>
+          <div class="deck-hero-ribbon" style="background-image: url('assets/ui/ribbon_${deck.id}.png')"><span>${h.name}</span></div>
+          <span class="deck-choice-desc">${h.passive}</span>
+        </div>
+        <div class="deck-hover-drawer">
+          <div class="deck-hover-strategy">${f.desc}</div>
+          <div class="deck-hover-cards">${hoverRows}</div>
+        </div>
       `;
+      btn.addEventListener("mouseenter", () => renderVsDeckDetail(deck.id));
+      btn.addEventListener("mouseleave", () => renderVsDeckDetail(lobby.selectedDeckId));
       btn.addEventListener("click", () => {
         if (lobby.myReady) return;
         lobby.selectedDeckId = deck.id;
@@ -612,20 +696,7 @@
       slotsEl.appendChild(btn);
     });
 
-    const selected = window.getStarterDeckById(lobby.selectedDeckId);
-    if (selected) {
-      if (nameEl) nameEl.textContent = `${selected.name} (${selected.archetype})`;
-      const counts = {};
-      selected.cards.forEach((id) => {
-        counts[id] = (counts[id] || 0) + 1;
-      });
-      previewEl.innerHTML = Object.entries(counts)
-        .map(([id, qty]) => {
-          const card = typeof CARD_CATALOG !== "undefined" ? CARD_CATALOG[id] : null;
-          return `<span class="vs-preview-chip">${qty}x ${card ? card.name : id}</span>`;
-        })
-        .join("");
-    }
+    renderVsDeckDetail(lobby.selectedDeckId);
   }
 
   function updateLobbyUI() {
@@ -639,7 +710,7 @@
         rivalPill.textContent = "RIVAL: LISTO";
         rivalPill.classList.add("ready");
       } else {
-        rivalPill.textContent = "RIVAL: ELIGIENDO DECK";
+        rivalPill.textContent = "RIVAL: ELIGIENDO HEROE";
         rivalPill.classList.add("connected");
       }
     }
@@ -650,7 +721,7 @@
         readyBtn.textContent = "ESPERANDO CONEXION...";
       } else if (lobby.myReady) {
         readyBtn.disabled = false;
-        readyBtn.textContent = "LISTO (PULSA PARA CANCELAR)";
+        readyBtn.textContent = "LISTO (CANCELAR)";
       } else {
         readyBtn.disabled = false;
         readyBtn.textContent = "LISTO PARA DUELO";
@@ -674,7 +745,7 @@
         lobby.connected = true;
         lobby.myReady = false;
         lobby.rivalReady = false;
-        setLobbyStatus(`Conectado en sala ${code}. Elige tu slot de deck y pulsa LISTO.`);
+        setLobbyStatus(`Conectado en sala ${code}. Elige tu Heroe y pulsa LISTO PARA DUELO.`);
         updateLobbyUI();
         window.PvpNet.send({ type: "DECK_SELECT", deckId: lobby.selectedDeckId });
       },
@@ -712,7 +783,7 @@
           document.getElementById("title-screen")?.classList.add("hidden");
           document.getElementById("game-over-modal")?.classList.add("hidden");
           document.getElementById("rest-screen")?.classList.add("hidden");
-          document.querySelector(".main-stage")?.style.setProperty("--arena-bg", 'url("assets/backgrounds/arena_bg.png")');
+          document.querySelector(".main-stage")?.style.setProperty("--arena-bg", 'url("assets/ui/arena_bg.png")');
           applyLocalViewState(data.view);
           return;
         }
@@ -723,6 +794,7 @@
     });
 
     document.getElementById("play-vs-btn")?.addEventListener("click", () => {
+      document.getElementById("title-screen")?.classList.add("hidden");
       document.getElementById("vs-lobby-modal")?.classList.remove("hidden");
       renderDeckSlots();
       updateLobbyUI();
@@ -784,9 +856,7 @@
         window.PvpNet.send({ type: "ACTION", actionType, payload });
       }
     },
-    onMatchEnded() {
-      // Handled inside syncBothClients / withHostActorContext
-    },
+    onMatchEnded() {},
     returnToLobby() {
       clearReactionTimers();
       pvpMatch = null;
