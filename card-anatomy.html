@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>Duelforge - Anatomia de Carta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root {
+      color-scheme: dark;
+      accent-color: #38bdf8;
+      --lab-bg: #090d16;
+      --lab-panel: #111827;
+      --lab-border: #283548;
+      --lab-text: #e2e8f0;
+      --lab-muted: #94a3b8;
+      --lab-accent: #38bdf8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--lab-bg);
+      color: var(--lab-text);
+      font-family: var(--font-ui, "Nunito", sans-serif);
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Top Control Bar */
+    .lab-header {
+      background: var(--lab-panel);
+      border-bottom: 1px solid var(--lab-border);
+      padding: 12px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .lab-title-group {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .lab-title {
+      margin: 0;
+      font-family: var(--font-display, "Fredoka", sans-serif);
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: 0.4px;
+    }
+
+    .lab-subtitle {
+      font-size: 12px;
+      color: var(--lab-muted);
+    }
+
+    .lab-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0b1120;
+      border: 1px solid var(--lab-border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .control-group label {
+      color: var(--lab-muted);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .control-group select {
+      background: #111827;
+      color: #f8fafc;
+      border: 1px solid var(--lab-border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    .seg-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .seg-btn {
+      background: transparent;
+      color: var(--lab-muted);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .seg-btn.active {
+      background: rgba(56, 189, 248, 0.16);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.45);
+    }
+
+    /* Main Workspace Grid */
+    .lab-workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      min-height: 0;
+    }
+
+    @media (max-width: 960px) {
+      .lab-workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Stage */
+    .stage-column {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    .zoom-stage {
+      flex: 1;
+      min-height: 440px;
+      background:
+        radial-gradient(circle at center, rgba(56, 189, 248, 0.08) 0%, transparent 65%),
+        linear-gradient(to right, rgba(40, 53, 72, 0.22) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(40, 53, 72, 0.22) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px, 24px 24px;
+      border: 1px solid var(--lab-border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 48px;
+      overflow: hidden;
+    }
+
+    .zoom-wrapper {
+      transform: scale(var(--card-zoom, 2.3));
+      transform-origin: center center;
+      transition: transform 0.15s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Override game hover lift inside inspector so measurements stay steady */
+    .zoom-wrapper .hand-card:hover {
+      transform: none;
+    }
+
+    .zoom-wrapper .hand-card {
+      width: 118px;
+      height: 166px;
+      cursor: default;
+    }
+
+    /* X-Ray Highlights */
+    .xray-target {
+      transition: outline 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .xray-on [data-part] {
+      outline: 1px dashed rgba(255, 255, 255, 0.35);
+      outline-offset: 1px;
+    }
+
+    .part-active {
+      outline: 2px solid #38bdf8 !important;
+      outline-offset: 2px !important;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.28) !important;
+      z-index: 40;
+    }
+
+    .stage-badge-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 14px;
+      font-size: 12px;
+      color: var(--lab-muted);
+      background: rgba(9, 13, 22, 0.85);
+      border: 1px solid var(--lab-border);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    /* Real-size 1:1 Context Strip */
+    .context-strip {
+      background: var(--lab-panel);
+      border: 1px solid var(--lab-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+
+    .context-strip-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--lab-muted);
+      font-weight: 800;
+      margin: 0 0 12px;
+    }
+
+    .context-grid {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 24px;
+    }
+
+    .context-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .context-label {
+      font-size: 11px;
+      color: var(--lab-muted);
+      font-weight: 700;
+    }
+
+    /* Right Inspector Panel */
+    .inspector-panel {
+      background: var(--lab-panel);
+      border-left: 1px solid var(--lab-border);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .panel-heading {
+      margin: 0;
+      font-family: var(--font-display, "Fredoka", sans-serif);
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .parts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .part-row {
+      background: #0b1120;
+      border: 1px solid var(--lab-border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      transition: border-color 0.12s ease, background 0.12s ease;
+    }
+
+    .part-row:hover,
+    .part-row.active {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .part-row-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .part-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .part-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .part-metrics {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      color: #38bdf8;
+    }
+
+    .part-desc {
+      font-size: 12px;
+      color: var(--lab-muted);
+      line-height: 1.35;
+    }
+
+    .card-raw-box {
+      background: #0b1120;
+      border: 1px solid var(--lab-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--lab-muted);
+      line-height: 1.45;
+    }
+
+    .card-raw-box strong {
+      color: #f1f5f9;
+    }
+  </style>
+</head>
+<body>
+  <header class="lab-header">
+    <div class="lab-title-group">
+      <h1 class="lab-title">Duelforge - Anatomia de Carta</h1>
+      <span class="lab-subtitle">Visor en vivo conectado al catalogo real</span>
+    </div>
+
+    <div class="lab-controls">
+      <div class="control-group">
+        <label for="card-select">Carta</label>
+        <select id="card-select"></select>
+      </div>
+
+      <div class="control-group">
+        <label>Contexto</label>
+        <div class="seg-buttons" id="context-buttons">
+          <button type="button" class="seg-btn active" data-ctx="hand">Mano</button>
+          <button type="button" class="seg-btn" data-ctx="market">Mercado (Oro)</button>
+          <button type="button" class="seg-btn" data-ctx="booster">Booster (Rareza)</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="zoom-range">Zoom <span id="zoom-val">2.3x</span></label>
+        <input id="zoom-range" type="range" min="1.4" max="3.2" step="0.1" value="2.3" />
+      </div>
+
+      <div class="control-group">
+        <label>
+          <input id="xray-toggle" type="checkbox" checked />
+          Rayos X
+        </label>
+        <label>
+          <input id="ephemeral-toggle" type="checkbox" />
+          Forzar Efimera
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="lab-workspace">
+    <section class="stage-column">
+      <div class="zoom-stage xray-on" id="zoom-stage">
+        <div class="zoom-wrapper" id="zoom-wrapper"></div>
+        <div class="stage-badge-hint">Pasa el raton por una capa de la derecha o haz clic en la carta para inspeccionar.</div>
+      </div>
+
+      <div class="context-strip">
+        <h2 class="context-strip-title">Comparativa a Tamano Real (1:1 en el juego)</h2>
+        <div class="context-grid" id="context-grid"></div>
+      </div>
+    </section>
+
+    <aside class="inspector-panel">
+      <h2 class="panel-heading">Capas y Elementos de la Carta</h2>
+      <div class="parts-list" id="parts-list"></div>
+
+      <div class="card-raw-box" id="card-raw-box"></div>
+    </aside>
+  </main>
+
+  <script src="cards_data.js"></script>
+  <script src="game.js"></script>
+  <script>
+    const ANATOMY_PARTS = [
+      {
+        key: "frame",
+        name: "1. Marco Base (.hand-card)",
+        color: "#94a3b8",
+        desc: "Contenedor exterior (118x166 base). Define marco segun tipo y borde segun rareza."
+      },
+      {
+        key: "crest",
+        name: "2. Emblema de Tipo (.card-type-crest)",
+        color: "#38bdf8",
+        desc: "Icono superior izquierdo que indica si es Unidad, Hechizo, Tactica, Reliquia o Equipo."
+      },
+      {
+        key: "cost",
+        name: "3. Orbe de Energia (.energy-cost)",
+        color: "#facc15",
+        desc: "Orbe superior derecho dentro de .card-banner-cost-only con el coste en Energia."
+      },
+      {
+        key: "badges",
+        name: "4. Insignias Laterales (.card-side-badges)",
+        color: "#a855f7",
+        desc: "Columna vertical flotante para Keywords (Guardia, Prisa, Perforar, Al Morir, Efimera, etc.)."
+      },
+      {
+        key: "art",
+        name: "5. Ventana de Arte (.card-art-wrap)",
+        color: "#34d399",
+        desc: "Zona central que aloja la ilustracion 512x512 transparente."
+      },
+      {
+        key: "stats",
+        name: "6. Iconos de Stats (.card-stat-icons)",
+        color: "#22d3ee",
+        desc: "Fila de iconos generada por buildCardStatIcons (ATK, HP, DMG, SHD, ORO, CARTA)."
+      },
+      {
+        key: "ribbon",
+        name: "7. Cinta de Nombre (.card-name-ribbon)",
+        color: "#fb923c",
+        desc: "Cinta inferior coloreada segun rareza (comun, rara, epica, legendaria) con el nombre."
+      },
+      {
+        key: "extra",
+        name: "8. Contexto (Oro / Rareza / Nota)",
+        color: "#f43f5e",
+        desc: "En Mercado muestra el precio en Oro; en Boosters muestra la pildora de Rareza y nota compleja."
+      }
+    ];
+
+    const selectEl = document.getElementById("card-select");
+    const zoomStage = document.getElementById("zoom-stage");
+    const zoomWrapper = document.getElementById("zoom-wrapper");
+    const contextGrid = document.getElementById("context-grid");
+    const partsList = document.getElementById("parts-list");
+    const rawBox = document.getElementById("card-raw-box");
+    const zoomRange = document.getElementById("zoom-range");
+    const zoomVal = document.getElementById("zoom-val");
+    const xrayToggle = document.getElementById("xray-toggle");
+    const ephemeralToggle = document.getElementById("ephemeral-toggle");
+
+    let currentCtx = "hand";
+    let activePart = null;
+
+    function populateCardSelect() {
+      const ids = Object.keys(CARD_CATALOG);
+      ids.forEach((id) => {
+        const c = CARD_CATALOG[id];
+        const opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = `${c.name} (${c.type} | ${c.faction || "neutral"} | ${c.rarity} | ${c.cost} EN)`;
+        selectEl.appendChild(opt);
+      });
+      selectEl.value = "valquiria";
+    }
+
+    function buildRealCardNode(card, ctx, withDataParts = false) {
+      const isEph = ephemeralToggle.checked || ctx === "market";
+      const cardData = { ...card, ephemeral: isEph };
+      const wrap = document.createElement("div");
+      wrap.style.display = "flex";
+      wrap.style.flexDirection = "column";
+      wrap.style.alignItems = "center";
+      wrap.style.gap = "6px";
+
+      if (ctx === "booster") {
+        const pill = document.createElement("span");
+        pill.className = `rarity-pill rarity-${cardData.rarity}`;
+        pill.textContent = cardData.rarity;
+        if (withDataParts) pill.dataset.part = "extra";
+        wrap.appendChild(pill);
+      }
+
+      const { iconsHtml, complexNote } = buildCardStatIcons(cardData);
+      const cardEl = document.createElement("div");
+      cardEl.className = `hand-card type-${cardData.type} rarity-${cardData.rarity || "comun"} ${cardData.ephemeral ? "ephemeral" : ""}`;
+      if (withDataParts) cardEl.dataset.part = "frame";
+
+      cardEl.innerHTML = `
+        <div class="card-type-crest" ${withDataParts ? 'data-part="crest"' : ""} title="Tipo: ${cardData.type}">
+          <img src="${getCardTypeIcon(cardData.type)}" alt="${cardData.type}" />
+        </div>
+        ${buildCardBadges(cardData)}
+        <div class="card-banner card-banner-cost-only">
+          <span class="energy-cost" ${withDataParts ? 'data-part="cost"' : ""}><span>${cardData.cost}</span></span>
+        </div>
+        <div class="card-art-wrap" ${withDataParts ? 'data-part="art"' : ""}>
+          <img src="${cardData.art}" alt="${cardData.name}" />
+        </div>
+        ${iconsHtml}
+        <div class="card-name-ribbon ribbon-${cardData.rarity || "comun"}" ${withDataParts ? 'data-part="ribbon"' : ""}><span>${cardData.name}</span></div>
+      `;
+
+      if (withDataParts) {
+        const badgesEl = cardEl.querySelector(".card-side-badges");
+        if (badgesEl) badgesEl.dataset.part = "badges";
+        const statsEl = cardEl.querySelector(".card-stat-icons");
+        if (statsEl) statsEl.dataset.part = "stats";
+      }
+
+      if (ctx === "market") {
+        const goldBadge = document.createElement("div");
+        goldBadge.className = "market-gold-badge";
+        goldBadge.innerHTML = `<img src="assets/ui/icon_coin.png" alt="Oro" /><span>${cardData.goldCost}</span>`;
+        if (withDataParts) goldBadge.dataset.part = "extra";
+        cardEl.appendChild(goldBadge);
+      }
+
+      wrap.appendChild(cardEl);
+      if (ctx === "booster" && complexNote) {
+        const noteEl = document.createElement("div");
+        noteEl.className = "card-complex-note";
+        noteEl.textContent = complexNote;
+        wrap.appendChild(noteEl);
+      }
+      return wrap;
+    }
+
+    function buildUnitTokenPreview(card) {
+      const slot = document.createElement("div");
+      slot.className = "unit-slot";
+      slot.style.width = "108px";
+      slot.style.height = "116px";
+      const token = document.createElement("div");
+      token.className = "unit-token ready";
+      const badges = [];
+      if (card.guard) badges.push('<span class="badge-icon"><img src="assets/ui/badge_guard.png" alt="Guardia" /></span>');
+      if (card.stealth) badges.push('<span class="badge-icon"><img src="assets/ui/badge_stealth.png" alt="Escabullirse" /></span>');
+      if (card.pierce) badges.push('<span class="badge-icon"><img src="assets/ui/badge_pierce.png" alt="Perforar" /></span>');
+      if (card.onDeath) badges.push('<span class="side-badge ondeath">AL MORIR</span>');
+      token.innerHTML = `
+        <span class="unit-token-name">${card.name}</span>
+        ${badges.length ? `<div class="card-side-badges">${badges.join("")}</div>` : ""}
+        <img class="unit-token-art" src="${card.art}" alt="${card.name}" />
+        <div class="unit-medallion atk-medallion"><img src="assets/ui/stat_atk.png" alt="ATK" /><span>${card.atk}</span></div>
+        <div class="unit-medallion hp-medallion"><img src="assets/ui/stat_hp.png" alt="HP" /><span>${card.hp}</span></div>
+      `;
+      slot.appendChild(token);
+      return slot;
+    }
+
+    function measurePart(key) {
+      const el = zoomWrapper.querySelector(`[data-part="${key}"]`);
+      if (!el) return "No visible en este modo";
+      const zoom = parseFloat(zoomRange.value) || 1;
+      const r = el.getBoundingClientRect();
+      const rootR = zoomWrapper.getBoundingClientRect();
+      const w = Math.round(r.width / zoom);
+      const h = Math.round(r.height / zoom);
+      const x = Math.round((r.left - rootR.left) / zoom);
+      const y = Math.round((r.top - rootR.top) / zoom);
+      return `${w}x${h}px (x:${x}, y:${y})`;
+    }
+
+    function highlightPart(key) {
+      activePart = key;
+      zoomWrapper.querySelectorAll("[data-part]").forEach((el) => {
+        el.classList.toggle("part-active", el.dataset.part === key);
+      });
+      partsList.querySelectorAll(".part-row").forEach((row) => {
+        row.classList.toggle("active", row.dataset.key === key);
+      });
+    }
+
+    function renderInspector(card) {
+      partsList.innerHTML = "";
+      ANATOMY_PARTS.forEach((p) => {
+        const row = document.createElement("div");
+        row.className = `part-row ${activePart === p.key ? "active" : ""}`;
+        row.dataset.key = p.key;
+        row.innerHTML = `
+          <div class="part-row-top">
+            <span class="part-name"><span class="part-dot" style="background:${p.color}"></span>${p.name}</span>
+            <span class="part-metrics">${measurePart(p.key)}</span>
+          </div>
+          <div class="part-desc">${p.desc}</div>
+        `;
+        row.addEventListener("mouseenter", () => highlightPart(p.key));
+        row.addEventListener("click", () => highlightPart(p.key));
+        partsList.appendChild(row);
+      });
+
+      rawBox.innerHTML = `
+        <strong>Datos de la carta (${card.id}):</strong><br>
+        Tipo: ${card.type} | Faccion: ${card.faction || "neutral"} | Rareza: ${card.rarity} | Energia: ${card.cost} | Oro: ${card.goldCost || 0}<br>
+        Texto corto: <code>${card.shortTag}</code><br>
+        Tooltip: ${card.desc}
+      `;
+    }
+
+    function renderAll() {
+      const card = CARD_CATALOG[selectEl.value];
+      if (!card) return;
+
+      zoomWrapper.style.setProperty("--card-zoom", zoomRange.value);
+      zoomVal.textContent = `${parseFloat(zoomRange.value).toFixed(1)}x`;
+      zoomStage.classList.toggle("xray-on", xrayToggle.checked);
+
+      zoomWrapper.innerHTML = "";
+      const mainNode = buildRealCardNode(card, currentCtx, true);
+      zoomWrapper.appendChild(mainNode);
+
+      // Click directly on any part of the zoomed card to inspect it
+      zoomWrapper.querySelectorAll("[data-part]").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          highlightPart(el.dataset.part);
+        });
+      });
+
+      // Context 1:1 strip
+      contextGrid.innerHTML = "";
+      [
+        { ctx: "hand", label: "En Mano (1:1)" },
+        { ctx: "market", label: "En Mercado (1:1)" },
+        { ctx: "booster", label: "En Booster (1:1)" }
+      ].forEach(({ ctx, label }) => {
+        const item = document.createElement("div");
+        item.className = "context-item";
+        item.appendChild(buildRealCardNode(card, ctx, false));
+        const lbl = document.createElement("span");
+        lbl.className = "context-label";
+        lbl.textContent = label;
+        item.appendChild(lbl);
+        contextGrid.appendChild(item);
+      });
+
+      if (card.type === "Unidad") {
+        const item = document.createElement("div");
+        item.className = "context-item";
+        item.appendChild(buildUnitTokenPreview(card));
+        const lbl = document.createElement("span");
+        lbl.className = "context-label";
+        lbl.textContent = "Ficha en Tablero";
+        item.appendChild(lbl);
+        contextGrid.appendChild(item);
+      }
+
+      requestAnimationFrame(() => {
+        renderInspector(card);
+        if (activePart) highlightPart(activePart);
+      });
+    }
+
+    selectEl.addEventListener("change", renderAll);
+    zoomRange.addEventListener("input", renderAll);
+    xrayToggle.addEventListener("change", renderAll);
+    ephemeralToggle.addEventListener("change", renderAll);
+
+    document.getElementById("context-buttons").addEventListener("click", (e) => {
+      const btn = e.target.closest(".seg-btn");
+      if (!btn) return;
+      currentCtx = btn.dataset.ctx;
+      document.querySelectorAll("#context-buttons .seg-btn").forEach((b) => {
+        b.classList.toggle("active", b === btn);
+      });
+      renderAll();
+    });
+
+    populateCardSelect();
+    renderAll();
+  </script>
+</body>
+</html>

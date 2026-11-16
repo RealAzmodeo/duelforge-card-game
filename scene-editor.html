@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Duelforge - Visor de Escenas</title>
+  <link rel="stylesheet" href="scene-editor.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand-badge">VISOR DE ESCENAS</span>
+      <nav class="scene-tabs" id="scene-tabs" aria-label="Escenas"></nav>
+    </div>
+
+    <div class="topbar-right">
+      <label class="toggle-chip" title="Guardar automaticamente cada cambio en el proyecto">
+        <input type="checkbox" id="autosave-toggle" />
+        <span>Auto-guardar</span>
+      </label>
+      <span id="save-status" class="save-status saved">Sin cambios pendientes</span>
+      <button id="reset-scene-btn" class="btn btn-secondary" type="button">Restablecer Escena</button>
+      <button id="save-btn" class="btn btn-primary" type="button">Guardar</button>
+      <a href="index.html" target="_blank" class="btn btn-outline">Abrir Juego</a>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <!-- Left Sidebar: Scene Elements -->
+    <aside class="panel panel-left">
+      <div class="panel-header">
+        <h2>Elementos</h2>
+        <label class="mini-toggle" title="Permite hacer clic en cualquier elemento del juego aunque no este en la lista">
+          <input type="checkbox" id="freepick-toggle" checked />
+          <span>Clic libre</span>
+        </label>
+      </div>
+      <div class="add-el-bar">
+        <button id="add-img-btn" class="btn-mini" type="button">+ Imagen</button>
+        <button id="add-btn-btn" class="btn-mini" type="button">+ Boton</button>
+        <button id="add-txt-btn" class="btn-mini" type="button">+ Texto</button>
+      </div>
+      <div id="prefab-bar" class="prefab-bar hidden">
+        <span id="prefab-title" class="prefab-title">Prefab</span>
+        <button id="prefab-exit-btn" class="btn-mini" type="button">Salir</button>
+      </div>
+      <div id="elements-list" class="elements-list"></div>
+      <div class="panel-tip">
+        Haz clic en un elemento de la lista o directamente en la pantalla para seleccionarlo y arrastrarlo.
+      </div>
+    </aside>
+
+    <!-- Center Stage: Live Game Iframe -->
+    <section class="stage-area">
+      <div class="stage-toolbar">
+        <span id="stage-label" class="stage-label">Escena: Titulo</span>
+        <div class="zoom-controls">
+          <select id="res-select" class="btn-mini" title="Resolucion de vista previa">
+            <option value="1920x1080" selected>1920x1080 (16:9)</option>
+            <option value="1280x720">1280x720 (HD)</option>
+          </select>
+          <button type="button" class="btn-mini active" data-zoom="fit">Ajustar</button>
+          <button type="button" class="btn-mini" data-zoom="1">100%</button>
+          <button type="button" class="btn-mini" data-zoom="0.75">75%</button>
+          <button type="button" class="btn-mini" data-zoom="0.5">50%</button>
+        </div>
+      </div>
+      <div class="iframe-viewport" id="iframe-viewport">
+        <div class="iframe-scaler" id="iframe-scaler">
+          <iframe id="game-frame" src="index.html?editor=1" title="Vista previa del juego"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Sidebar: Inspector & Asset Picker -->
+    <aside class="panel panel-right">
+      <div class="panel-header">
+        <h2>Inspector</h2>
+        <button id="reset-el-btn" class="btn-mini danger" type="button" disabled>Restablecer</button>
+      </div>
+
+      <div id="inspector-empty" class="inspector-empty">
+        Selecciona cualquier elemento de la escena para ajustar su posicion, tamano, rotacion o imagen.
+      </div>
+
+      <div id="inspector-body" class="inspector-body hidden">
+        <div class="selected-card">
+          <div id="sel-name" class="sel-name">-</div>
+          <div id="sel-selector" class="sel-selector">-</div>
+        </div>
+
+        <div id="custom-text-group" class="control-group hidden">
+          <div class="control-row">
+            <label for="inp-custom-text">Texto</label>
+            <button id="delete-custom-btn" class="btn-mini danger" type="button">Eliminar</button>
+          </div>
+          <input type="text" id="inp-custom-text" class="asset-search" placeholder="Texto del elemento..." />
+        </div>
+
+        <div id="custom-delete-only" class="control-group hidden">
+          <div class="control-row">
+            <span>Elemento agregado</span>
+            <button id="delete-custom-img-btn" class="btn-mini danger" type="button">Eliminar</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-row">
+            <label for="inp-x">Posicion X (px)</label>
+            <input type="number" id="inp-x" step="1" value="0" />
+          </div>
+          <input type="range" id="rng-x" min="-1000" max="1000" step="1" value="0" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-row">
+            <label for="inp-y">Posicion Y (px)</label>
+            <input type="number" id="inp-y" step="1" value="0" />
+          </div>
+          <input type="range" id="rng-y" min="-600" max="600" step="1" value="0" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-row">
+            <label for="inp-scale">Tamano (%)</label>
+            <input type="number" id="inp-scale" min="10" max="400" step="1" value="100" />
+          </div>
+          <input type="range" id="rng-scale" min="20" max="250" step="1" value="100" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-row">
+            <label for="inp-rotate">Rotacion (grados)</label>
+            <input type="number" id="inp-rotate" min="-180" max="180" step="1" value="0" />
+          </div>
+          <input type="range" id="rng-rotate" min="-180" max="180" step="1" value="0" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-row">
+            <label for="inp-z">Capa (Orden)</label>
+            <div class="z-controls">
+              <button id="z-back-btn" class="btn-mini" type="button" title="Enviar atras">-1</button>
+              <input type="number" id="inp-z" step="1" value="0" />
+              <button id="z-front-btn" class="btn-mini" type="button" title="Traer adelante">+1</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="asset-section" class="asset-section hidden">
+          <div class="asset-header">
+            <span>Imagen (Asset)</span>
+            <button id="clear-asset-btn" class="btn-mini" type="button">Original</button>
+          </div>
+          <div class="current-asset-box">
+            <img id="current-asset-thumb" src="" alt="" />
+            <span id="current-asset-path" class="current-asset-path">-</span>
+          </div>
+          <input type="text" id="asset-search" class="asset-search" placeholder="Buscar imagen..." />
+          <div class="asset-cats" id="asset-cats"></div>
+          <div class="asset-grid" id="asset-grid"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="scene-layout.js"></script>
+  <script src="scene-editor.js"></script>
+</body>
+</html>

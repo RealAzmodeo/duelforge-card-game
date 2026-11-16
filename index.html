@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Duelforge - Roguelike Card Duel</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23ff3b5c'/><text x='16' y='22' font-size='18' font-weight='900' text-anchor='middle' fill='%23ffd23f' font-family='sans-serif'>D</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Cinzel:wght@700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=map10" />
+</head>
+<body>
+  <!-- Title / Landing Screen -->
+  <div id="title-screen" class="title-screen">
+    <canvas id="title-particles" class="title-particles"></canvas>
+    <div class="title-content">
+      <img src="assets/ui/game_logo.png" alt="Duelforge" class="title-logo" />
+      <p class="title-tagline">DUELOS ROGUELIKE 1v1 - FORJA TU MAZO EN VIVO</p>
+      <div class="title-actions">
+        <button id="play-btn" class="play-hero-btn" type="button">JUGAR (VS IA)</button>
+        <button id="play-vs-btn" class="play-hero-btn play-hero-btn--vs" type="button">DUELO VS (ONLINE)</button>
+        <button id="open-collection-btn" class="collection-entry-btn" type="button">COLECCION Y PROGRESO</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Intermediate Starter Deck Selection Screen -->
+  <div id="deck-select-screen" class="deck-select-screen hidden">
+    <div class="deck-select-wrap">
+      <div class="deck-select-header">
+        <div>
+          <h2>ELIGE TU MAZO INICIAL</h2>
+          <p class="deck-select-sub">Selecciona una caja para ver sus cartas y estrategia antes de entrar al mapa.</p>
+        </div>
+        <div class="deck-select-header-actions">
+          <button id="deck-open-collection-btn" class="game-plate-btn plate-amber" type="button">COLECCION</button>
+          <button id="deck-select-back-btn" class="game-plate-btn plate-blue" type="button">VOLVER</button>
+        </div>
+      </div>
+
+      <div id="deck-selector" class="deck-selector"></div>
+
+      <div id="deck-detail-panel" class="deck-detail-panel">
+        <div class="deck-detail-head">
+          <div class="deck-detail-title-row">
+            <h3 id="deck-detail-name">FORJA DE HIERRO</h3>
+            <span id="deck-detail-tag" class="deck-choice-tag faction-tag">TANQUE / EQUIPOS</span>
+            <span id="deck-detail-count" class="map-stat-pill">10 CARTAS</span>
+          </div>
+          <p id="deck-detail-desc" class="deck-detail-desc"></p>
+        </div>
+        <div id="deck-detail-cards" class="deck-detail-cards"></div>
+      </div>
+
+      <div class="deck-select-backs">
+        <div class="section-label">DORSO DE CARTA</div>
+        <div id="card-back-selector" class="card-back-selector"></div>
+      </div>
+
+      <div class="deck-select-footer">
+        <button id="deck-start-run-btn" class="play-hero-btn" type="button">COMENZAR RUN</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app">
+    <!-- Left Column: Main Duel Stage -->
+    <div class="main-stage">
+      <!-- Top HUD: Enemy Hero + Enemy Face-Down Hand + Enemy Deck/Stage -->
+      <header class="top-bar">
+        <div class="hero-panel enemy-hero" id="enemy-hero-panel">
+          <div class="hero-avatar enemy-avatar">
+            <img id="enemy-avatar-img" src="assets/heroes/enemy_hero.png" alt="Capitan Hierro" />
+            <img id="enemy-frame-img" class="portrait-frame-overlay" src="assets/ui/portrait_frame_iron.png" alt="" />
+          </div>
+          <div id="enemy-bubble" class="speech-bubble enemy-bubble hidden"></div>
+          <div class="hero-stats">
+            <div class="hero-name" id="enemy-name">CAPITAN HIERRO</div>
+            <div class="stat-row">
+              <span class="stat-pill hp-pill">
+                <img src="assets/ui/stat_hp.png" alt="HP" />
+                <span id="enemy-hp">48/48</span>
+              </span>
+              <span class="stat-pill shd-pill">
+                <img src="assets/ui/stat_shd.png" alt="SHD" />
+                <span id="enemy-armor">0</span>
+              </span>
+            </div>
+            <div class="intention-box" id="enemy-intention">
+              INTENCION: Atacando por 7
+            </div>
+          </div>
+        </div>
+
+        <div class="enemy-hand-zone">
+          <div class="enemy-hand" id="enemy-hand"></div>
+          <div class="enemy-deck-pile" title="Mazo Rival">
+            <img id="enemy-deck-img" src="assets/ui/card_back_enemy.png" alt="Mazo Rival" />
+            <span class="pile-count-badge" id="enemy-deck-count">10</span>
+          </div>
+        </div>
+
+        <div class="stage-compact-box">
+          <span id="stage-indicator">COMBATE 1 / 3</span>
+          <span id="turn-indicator">TURNO 1 - TU TURNO</span>
+          <div id="turn-timer-box" class="turn-timer-box">
+            <div class="turn-timer-track">
+              <div id="turn-timer-fill" class="turn-timer-fill"></div>
+            </div>
+            <span id="turn-timer-text" class="turn-timer-text">35s</span>
+          </div>
+          <div class="stage-mini-actions">
+            <button id="open-map-btn" class="sfx-mute-btn" type="button" title="Ver mapa de ruta">MAPA</button>
+            <button id="sfx-mute-btn" class="sfx-mute-btn" type="button" title="Activar o silenciar efectos de sonido">SFX: ON</button>
+            <button id="auto-battle-btn" class="auto-battle-btn" type="button" title="Activar IA tactica automatica en combate">AUTO: OFF</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Center Arena: 3v3 Unit Slots + Compact Hint -->
+      <main class="arena">
+        <div class="board-side enemy-side">
+          <div class="slots-row" id="enemy-slots"></div>
+        </div>
+
+        <div class="center-hint-strip">
+          <span id="combat-hint">Juega cartas, compra del mercado o selecciona una unidad lista para atacar.</span>
+        </div>
+
+        <!-- 5s Reaction & Manual Block Banner (Shows Actual Enemy Card) -->
+        <div id="reaction-banner" class="reaction-banner hidden">
+          <div id="reaction-enemy-card" class="reaction-enemy-card"></div>
+          <div class="reaction-side">
+            <span class="reaction-tag">JUGADA RIVAL - RESPONDE O BLOQUEA</span>
+            <span id="reaction-text" class="reaction-text">Clic en una unidad tuya para bloquear o juega una carta de Reaccion.</span>
+            <div class="reaction-controls">
+              <div class="reaction-timer-track">
+                <div id="reaction-timer-fill" class="reaction-timer-fill"></div>
+              </div>
+              <span id="reaction-timer-num" class="reaction-timer-num">5.0s</span>
+              <button id="reaction-pass-btn" class="reaction-pass-btn">DEJAR PASAR</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="board-side player-side">
+          <div class="slots-row" id="player-slots"></div>
+        </div>
+      </main>
+
+      <!-- Bottom HUD: Player Hero + Deck Pile + Hand + Discard Pile + End Turn -->
+      <footer class="bottom-bar">
+        <div class="player-controls">
+          <div class="hero-panel player-hero" id="player-hero-panel">
+            <div class="hero-avatar player-avatar" id="player-avatar-btn" title="Clic para cambiar marco">
+              <img src="assets/heroes/player_hero.png" alt="Duelista" />
+              <img id="player-frame-img" class="portrait-frame-overlay" src="assets/ui/portrait_frame_gold.png" alt="" />
+              <span class="avatar-edit-hint">MARCO</span>
+            </div>
+            <div id="player-bubble" class="speech-bubble player-bubble hidden"></div>
+            <div id="frame-picker-popover" class="picker-popover hidden"></div>
+            <div id="emote-picker-popover" class="picker-popover emote-popover hidden"></div>
+            <div class="hero-stats">
+              <div class="hero-name-row">
+                <span class="hero-name">DUELISTA</span>
+                <button id="emote-trigger-btn" class="emote-btn" title="Enviar expresion">
+                  <img src="assets/ui/btn_emotes.png" alt="Gestos" />
+                </button>
+              </div>
+              <div class="stat-row">
+                <span class="stat-pill hp-pill">
+                  <img src="assets/ui/stat_hp.png" alt="HP" />
+                  <span id="player-hp">30/30</span>
+                </span>
+                <span class="stat-pill shd-pill">
+                  <img src="assets/ui/stat_shd.png" alt="SHD" />
+                  <span id="player-armor">0</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="energy-bar-box" id="energy-bar-box">
+            <span class="energy-label">ENERGIA</span>
+            <div class="energy-orbs" id="energy-orbs"></div>
+            <span class="energy-num" id="player-energy">3/3</span>
+          </div>
+
+          <div class="relics-zone" id="player-relics" title="Zona de Reliquias (max 2)"></div>
+        </div>
+
+        <div class="hand-stage">
+          <!-- Physical Deck Pile -->
+          <div class="table-pile deck-pile" id="player-deck-pile" title="Tu Mazo">
+            <img id="player-deck-img" src="assets/card_backs/back_forja.png" alt="Mazo" />
+            <span class="pile-count-badge" id="deck-count">10</span>
+            <span class="pile-label">MAZO</span>
+          </div>
+
+          <div class="hand-container" id="player-hand"></div>
+
+          <!-- Physical Discard Pile -->
+          <div class="table-pile discard-pile" id="player-discard-pile" title="Descarte">
+            <div class="discard-preview" id="discard-preview">VACIO</div>
+            <span class="pile-count-badge" id="discard-count">0</span>
+            <span class="pile-label">DESCARTE</span>
+          </div>
+        </div>
+
+        <div class="turn-actions">
+          <button id="end-turn-btn" class="btn-game">FIN DE TURNO</button>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Right Column: Live Market Sidebar -->
+    <aside class="market-sidebar" aria-label="Mercado Vivo">
+      <div class="market-header">
+        <span class="market-title">MERCADO VIVO</span>
+        <div class="market-gold-badge" id="player-gold">
+          <img src="assets/ui/icon_coin.png" alt="Oro" />
+          <span id="player-gold-val">0</span>
+        </div>
+      </div>
+      <div class="market-subrow">
+        <span class="market-subtitle">Temporales -> Directo a tu mano</span>
+        <span class="market-deck-count" id="market-count">Mazo: 19</span>
+      </div>
+
+      <div class="market-controls">
+        <div class="filter-pills" id="market-filters">
+          <button class="filter-btn active" data-filter="Todos">Todos</button>
+          <button class="filter-btn" data-filter="Unidad">Unidad</button>
+          <button class="filter-btn" data-filter="Hechizo">Hechizo</button>
+          <button class="filter-btn" data-filter="Tactica">Tactica</button>
+          <button class="filter-btn" data-filter="Reliquia">Reliquia</button>
+          <button class="filter-btn" data-filter="Equipo">Equipo</button>
+        </div>
+        <button class="sort-btn" id="market-sort-btn">Orden: Normal</button>
+      </div>
+
+      <div class="market-column" id="market-row"></div>
+    </aside>
+  </div>
+
+  <!-- Floating FX Layer -->
+  <div id="fx-layer"></div>
+
+  <!-- Booster Pack Reward Modal -->
+  <div id="booster-modal" class="modal hidden">
+    <div id="booster-burst" class="booster-burst"></div>
+    <div class="modal-card booster-modal-card">
+      <img id="booster-victory-banner" class="modal-banner-img hidden" src="assets/ui/banner_victory.png" alt="Victoria" />
+      <h2 id="booster-title">BOOSTER BASICO</h2>
+      <p id="booster-subtitle">Abre tu sobre para elegir 1 carta permanente.</p>
+
+      <div id="booster-pack-stage" class="booster-pack-stage">
+        <img id="booster-pack-img" src="assets/boosters/booster_basico.png" alt="Booster Pack" />
+      </div>
+
+      <div id="booster-choices" class="booster-choices hidden"></div>
+      <div id="booster-deck-preview" class="booster-deck-preview"></div>
+    </div>
+  </div>
+
+  <!-- Victory / Defeat Overlay -->
+  <div id="game-over-modal" class="modal hidden">
+    <div class="modal-card gameover-card">
+      <img id="gameover-banner-img" class="modal-banner-img" src="assets/ui/banner_victory.png" alt="" />
+      <h2 id="modal-title">VICTORIA</h2>
+      <p id="modal-subtitle">Has derrotado al rival.</p>
+      <button id="restart-btn" class="btn-game">JUGAR DE NUEVO</button>
+    </div>
+  </div>
+
+  <!-- Dungeon Rest Screen (Between Stages) -->
+  <div id="rest-screen" class="rest-screen hidden">
+    <canvas id="rest-sparks" class="rest-sparks"></canvas>
+    <div class="rest-hud-top">
+      <div class="rest-title-badge">CAMARA DE DESCANSO</div>
+      <div class="rest-hp-badge">HP ACTUAL: <span id="rest-hp-val">30/30</span></div>
+    </div>
+
+    <!-- Choices Floating Above Campfire -->
+    <div class="rest-fire-choices" id="rest-fire-choices">
+      <button id="rest-heal-btn" class="rest-choice-btn heal-choice">
+        <span class="rest-choice-title">DESCANSAR</span>
+        <span class="rest-choice-sub">Recupera +12 HP</span>
+      </button>
+      <button id="rest-gold-btn" class="rest-choice-btn gold-choice">
+        <span class="rest-choice-title">AVIVAR BRASAS</span>
+        <span class="rest-choice-sub">Empieza con +2 ORO</span>
+      </button>
+    </div>
+
+    <!-- Layered Characters & Props -->
+    <div class="rest-bag-wrap" id="rest-bag-btn" title="Abrir Inventario y Mazo">
+      <img src="assets/ui/rest_bag.png" alt="Inventario" />
+      <span class="rest-prop-label">INVENTARIO</span>
+    </div>
+
+    <div class="rest-hero-wrap">
+      <img src="assets/ui/rest_hero_hooded.png" alt="Heroe" />
+    </div>
+
+    <div class="rest-fire-wrap">
+      <div class="rest-fire-glow"></div>
+      <img class="rest-logs-img" src="assets/ui/rest_logs.png" alt="Troncos" />
+      <img class="rest-flames-img" src="assets/ui/rest_flames.png" alt="Llamas" />
+    </div>
+
+    <!-- Door Continue Button on the Right -->
+    <button id="rest-continue-btn" class="rest-door-btn">
+      <span>CONTINUAR</span>
+      <small id="rest-next-stage">SIGUIENTE: COMBATE 2</small>
+    </button>
+  </div>
+
+  <!-- Inventory / Deck & Sideline Slots Modal -->
+  <div id="inventory-modal" class="modal hidden">
+    <div class="modal-card inventory-modal-card">
+      <div class="inventory-header">
+        <h2>INVENTARIO DE CARTAS</h2>
+        <button id="inventory-close-btn" class="reaction-pass-btn">CERRAR</button>
+      </div>
+      <p class="inventory-sub">No puedes destruir cartas, pero puedes dejar de lado las que te estorben (slots limitados).</p>
+
+      <div class="sideline-section">
+        <div class="section-label">DEJADAS DE LADO (<span id="sideline-count">0/2</span> SLOTS) - Clic para devolver al mazo</div>
+        <div id="sideline-slots" class="sideline-slots"></div>
+      </div>
+
+      <div class="active-deck-section">
+        <div class="section-label">MAZO ACTIVO (<span id="active-deck-count">10</span> CARTAS) - Clic en una carta para dejarla de lado</div>
+        <div id="inventory-deck-cards" class="inventory-deck-cards"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VS Online Lobby & 5 Deck Slots Modal -->
+  <div id="vs-lobby-modal" class="modal hidden">
+    <div class="modal-card vs-lobby-card">
+      <div class="vs-lobby-header">
+        <div>
+          <h2>DUELO VS ONLINE</h2>
+          <p class="vs-lobby-sub">Conecta dos navegadores por codigo de sala y elige 1 de los 5 decks iniciales.</p>
+        </div>
+        <button id="vs-back-btn" class="reaction-pass-btn" type="button">VOLVER</button>
+      </div>
+
+      <div class="vs-connect-grid">
+        <div class="vs-connect-box">
+          <div class="vs-box-title">CREAR SALA</div>
+          <p class="vs-box-desc">Genera un codigo corto y compartelo con tu rival.</p>
+          <div class="vs-create-row">
+            <button id="vs-create-btn" class="btn-game vs-btn-sm" type="button">CREAR SALA</button>
+            <div id="vs-room-badge" class="vs-room-badge hidden">
+              <span class="vs-room-label">CODIGO:</span>
+              <strong id="vs-room-code">----</strong>
+              <button id="vs-copy-btn" class="vs-copy-btn" type="button">COPIAR</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vs-connect-box">
+          <div class="vs-box-title">UNIRSE A SALA</div>
+          <p class="vs-box-desc">Escribe el codigo de 4 caracteres que te dio tu rival.</p>
+          <div class="vs-join-row">
+            <input id="vs-join-input" class="vs-join-input" type="text" maxlength="8" placeholder="EJ. A7K2" autocomplete="off" />
+            <button id="vs-join-btn" class="btn-game vs-btn-sm" type="button">UNIRSE</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="vs-status-bar" class="vs-status-bar">
+        <span id="vs-status-text">Elige Crear Sala o Unirse a Sala para conectar.</span>
+        <span id="vs-rival-pill" class="vs-rival-pill">RIVAL: DESCONECTADO</span>
+      </div>
+
+      <div class="vs-decks-section">
+        <div class="vs-decks-head">
+          <span>ELIGE TU SLOT DE DECK INICIAL (1 DE 5)</span>
+          <span id="vs-selected-deck-name" class="vs-selected-deck-name">Vanguardia Clasica</span>
+        </div>
+        <div id="vs-deck-slots" class="vs-deck-slots"></div>
+        <div id="vs-deck-preview" class="vs-deck-preview"></div>
+      </div>
+
+      <div class="vs-lobby-footer">
+        <button id="vs-ready-btn" class="play-hero-btn vs-ready-btn" type="button" disabled>ESPERANDO CONEXION...</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Procedural Map Screen (Slay the Spire Style) -->
+  <div id="map-screen" class="map-screen hidden">
+    <div class="map-topbar">
+      <div class="map-topbar-left">
+        <div class="map-title-badge">RUTA DEL CALABOZO</div>
+        <span id="map-floor-badge" class="map-stat-pill">PISO 1 / 11</span>
+        <span id="map-hp-badge" class="map-stat-pill">HP: 30/30</span>
+        <span id="map-gold-badge" class="map-stat-pill map-gold-pill">ORO RUN: 35</span>
+      </div>
+      <div class="map-topbar-right">
+        <button id="map-deck-btn" class="reaction-pass-btn" type="button">VER MAZO</button>
+        <button id="map-close-btn" class="reaction-pass-btn hidden" type="button">VOLVER AL COMBATE</button>
+      </div>
+    </div>
+
+    <div class="map-legend">
+      <span class="legend-item"><img class="legend-icon" src="assets/ui/node_combat.png" alt="" /> Combate</span>
+      <span class="legend-item"><img class="legend-icon" src="assets/ui/node_elite.png" alt="" /> Elite</span>
+      <span class="legend-item"><img class="legend-icon" src="assets/ui/node_rest.png" alt="" /> Descanso</span>
+      <span class="legend-item"><img class="legend-icon" src="assets/ui/node_shop.png" alt="" /> Tienda</span>
+      <span class="legend-item"><img class="legend-icon" src="assets/ui/node_event.png" alt="" /> Evento (?)</span>
+      <span class="legend-item"><img class="legend-icon" src="assets/ui/node_boss.png" alt="" /> Jefe</span>
+    </div>
+
+    <div id="map-scroll-area" class="map-scroll-area">
+      <!-- Artist hook: .map-board-canvas accepts background-image topdown landscape -->
+      <div id="map-board-canvas" class="map-board-canvas">
+        <svg id="map-edges-svg" class="map-edges-svg"></svg>
+        <div id="map-nodes-layer" class="map-nodes-layer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop Modal -->
+  <div id="shop-modal" class="modal hidden">
+    <div class="modal-card shop-modal-card">
+      <div class="inventory-header shop-header">
+        <div class="shop-header-left">
+          <img class="shop-keeper-avatar" src="assets/ui/merchant_keeper.png" alt="Mercader" />
+          <div>
+            <h2>TIENDA DEL MERCADER</h2>
+            <p class="inventory-sub">Compra cartas permanentes o mejoras usando tu Oro de Run.</p>
+          </div>
+        </div>
+        <div class="shop-header-right">
+          <span id="shop-gold-val" class="map-stat-pill map-gold-pill">ORO RUN: 0</span>
+          <button id="shop-leave-btn" class="btn-game vs-btn-sm" type="button">CONTINUAR</button>
+        </div>
+      </div>
+      <div id="shop-services-row" class="shop-services-row"></div>
+      <div class="section-label">CARTAS EN VENTA (CLIC PARA COMPRAR)</div>
+      <div id="shop-cards-grid" class="shop-cards-grid"></div>
+    </div>
+  </div>
+
+  <!-- Event (?) Modal -->
+  <div id="event-modal" class="modal hidden">
+    <div class="modal-card event-modal-card">
+      <div class="event-badge">EVENTO MISTERIOSO</div>
+      <div class="event-art-wrap">
+        <img id="event-art-img" src="assets/ui/events/event_cofre_trampeado.png" alt="Evento" />
+      </div>
+      <h2 id="event-title">EVENTO</h2>
+      <p id="event-desc" class="event-desc"></p>
+      <div id="event-choices" class="event-choices"></div>
+      <p id="event-outcome" class="event-outcome hidden"></p>
+      <button id="event-continue-btn" class="btn-game hidden" type="button">VOLVER AL MAPA</button>
+    </div>
+  </div>
+
+  <!-- Collection & Compendium Screen -->
+  <div id="collection-screen" class="collection-screen hidden">
+    <div class="collection-wrap">
+      <div class="collection-header">
+        <div>
+          <h2>COLECCION Y COMPENDIO</h2>
+          <p id="collection-summary-line" class="deck-select-sub">Progreso de cartas, dorsos, bestiario, reliquias y boosters.</p>
+        </div>
+        <div class="collection-header-actions">
+          <button id="collection-reset-btn" class="game-plate-btn plate-crimson" type="button" title="Reiniciar progreso guardado">REINICIAR</button>
+          <button id="collection-close-btn" class="game-plate-btn plate-blue" type="button">CERRAR</button>
+        </div>
+      </div>
+
+      <div class="collection-tabs" id="collection-tabs">
+        <button class="collection-tab active" data-tab="cards" type="button">CARTAS</button>
+        <button class="collection-tab" data-tab="backs" type="button">DORSOS</button>
+        <button class="collection-tab" data-tab="codex" type="button">ENEMIGOS Y RELIQUIAS</button>
+        <button class="collection-tab" data-tab="stats" type="button">ESTADISTICAS Y BOOSTERS</button>
+      </div>
+
+      <div id="collection-filters" class="collection-filters"></div>
+      <div id="collection-body" class="collection-body"></div>
+    </div>
+  </div>
+
+  <!-- Floating Card Anatomy Inspector (Hover in Deck Select & Collection) -->
+  <div id="card-hover-inspector" class="card-hover-inspector hidden"></div>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="sfx-presets.js"></script>
+  <script src="sfx-engine.js"></script>
+  <script src="cards_data.js"></script>
+  <script src="decks_data.js"></script>
+  <script src="collection_system.js?v=map10"></script>
+  <script src="map_system.js?v=map10"></script>
+  <script src="pvp-net.js"></script>
+  <script src="game.js?v=map10"></script>
+  <script src="pvp-engine.js"></script>
+  <script src="scene-layout.js"></script>
+  <script src="scene-layout-runtime.js"></script>
+</body>
+</html>

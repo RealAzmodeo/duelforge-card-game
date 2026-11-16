@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SFX Lab - Laboratorio Multicapa</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel: #111827;
+      --panel-alt: #161f30;
+      --border: #283548;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --emerald: #10b981;
+      --emerald-hover: #059669;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.45;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background-color: var(--panel);
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; }
+    header p { font-size: 13px; color: var(--muted); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr 340px;
+      gap: 16px;
+      padding: 16px 24px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background-color: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 70vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .item-card {
+      background-color: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .item-card:hover, .item-card.active { border-color: var(--accent); }
+
+    .item-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .item-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-meta { font-size: 11px; color: var(--muted); }
+    .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    button {
+      background-color: var(--panel-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    button:hover { border-color: var(--accent); }
+    button.primary { background-color: var(--accent); border-color: var(--accent); color: #fff; }
+    button.primary:hover { background-color: var(--accent-hover); }
+    button.success { background-color: var(--emerald); border-color: var(--emerald); color: #fff; }
+    button.success:hover { background-color: var(--emerald-hover); }
+    button.danger { background-color: transparent; border-color: var(--border); color: var(--danger); }
+    button.danger:hover { border-color: var(--danger); background-color: rgba(239, 68, 68, 0.1); }
+    button.small { padding: 4px 8px; font-size: 12px; }
+    button.tab-active { background-color: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .layer-tabs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 650px) {
+      .controls-grid { grid-template-columns: 1fr; }
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background-color: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .control-value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+    }
+
+    input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+
+    select, input[type="text"] {
+      width: 100%;
+      background-color: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    select:focus, input[type="text"]:focus { outline: none; border-color: var(--accent); }
+
+    .play-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 4px; }
+    .save-bar { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--border); padding-top: 14px; }
+    .status-msg { font-size: 12px; color: var(--emerald); min-height: 18px; }
+    .empty-state { font-size: 13px; color: var(--muted); text-align: center; padding: 24px 12px; border: 1px dashed var(--border); border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>SFX Lab - Laboratorio Multicapa</h1>
+      <p>Sonidos procedurales combinando capas (papel, impacto, tonos y acordes) sin tocar el juego.</p>
+    </div>
+    <button id="muteBtn" type="button">Audio: Activo</button>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-title">
+        <span>Presets multicapa</span>
+        <span id="presetCount" class="control-value">0</span>
+      </div>
+      <div id="presetList" class="list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <span>Editor en tiempo real</span>
+        <span id="activePresetLabel" class="control-value">Personalizado</span>
+      </div>
+
+      <div class="layer-tabs" id="layerTabs"></div>
+
+      <div class="controls-grid">
+        <div class="control-group">
+          <div class="control-header"><label for="typeSelect">Tipo de fuente</label></div>
+          <select id="typeSelect">
+            <option value="sine">Sine (Suave / Campana)</option>
+            <option value="triangle">Triangle (Calido / Golpe)</option>
+            <option value="square">Square (Retro / Metalico)</option>
+            <option value="sawtooth">Sawtooth (Aspero / Impacto)</option>
+            <option value="noise">Noise (Papel / Barajar)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <div class="control-header"><label for="filterTypeSelect">Tipo de filtro</label></div>
+          <select id="filterTypeSelect">
+            <option value="lowpass">Lowpass (Suavizar agudos)</option>
+            <option value="bandpass">Bandpass (Enfocar medio)</option>
+            <option value="highpass">Highpass (Solo aire/brillo)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <div class="control-header">
+            <label for="freqStart">Frecuencia inicial</label>
+            <span id="freqStartVal" class="control-value">440 Hz</span>
+          </div>
+          <input id="freqStart" type="range" min="30" max="3500" step="5" value="440" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-header">
+            <label for="freqEnd">Frecuencia final</label>
+            <span id="freqEndVal" class="control-value">220 Hz</span>
+          </div>
+          <input id="freqEnd" type="range" min="20" max="3500" step="5" value="220" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-header">
+            <label for="durationMs">Duracion</label>
+            <span id="durationMsVal" class="control-value">120 ms</span>
+          </div>
+          <input id="durationMs" type="range" min="15" max="1000" step="5" value="120" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-header">
+            <label for="delayMs">Retardo de capa (Delay)</label>
+            <span id="delayMsVal" class="control-value">0 ms</span>
+          </div>
+          <input id="delayMs" type="range" min="0" max="500" step="5" value="0" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-header">
+            <label for="filterFreq">Corte de filtro</label>
+            <span id="filterFreqVal" class="control-value">1800 Hz</span>
+          </div>
+          <input id="filterFreq" type="range" min="80" max="6000" step="20" value="1800" />
+        </div>
+
+        <div class="control-group">
+          <div class="control-header">
+            <label for="volume">Volumen de capa</label>
+            <span id="volumeVal" class="control-value">35%</span>
+          </div>
+          <input id="volume" type="range" min="0.05" max="1" step="0.01" value="0.35" />
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="control-header">
+          <label for="pitchJitter">Variacion aleatoria global (para que no suene repetitivo)</label>
+          <span id="pitchJitterVal" class="control-value">5%</span>
+        </div>
+        <input id="pitchJitter" type="range" min="0" max="0.25" step="0.01" value="0.05" />
+      </div>
+
+      <div class="play-bar">
+        <button id="playBtn" class="primary" type="button">Reproducir sonido</button>
+        <button id="playBurstBtn" type="button">Probar rafaga (x3)</button>
+        <button id="randomizeBtn" type="button">Variacion aleatoria</button>
+      </div>
+
+      <div class="save-bar">
+        <input id="saveNameInput" type="text" placeholder="Nombre para guardar (ej. robo_carta_v2)" />
+        <button id="saveBtn" class="success" type="button">Guardar en registro</button>
+      </div>
+      <div id="statusMsg" class="status-msg"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <span>Registro guardado</span>
+        <span id="savedCount" class="control-value">0</span>
+      </div>
+      <div class="item-actions">
+        <button id="copyJsonBtn" class="small" type="button">Copiar JSON</button>
+        <button id="exportJsonBtn" class="small" type="button">Descargar JSON</button>
+        <button id="clearSavedBtn" class="small danger" type="button">Limpiar</button>
+      </div>
+      <div id="savedList" class="list"></div>
+    </section>
+  </main>
+
+  <script src="sfx-presets.js"></script>
+  <script>
+    (function () {
+      const STORAGE_KEY = "card_game_sfx_registry_v2";
+      let audioCtx = null;
+      let isMuted = false;
+      let activePresetId = null;
+      let activeLayerIdx = 0;
+
+      const presets = Array.isArray(window.SFX_PRESETS) ? window.SFX_PRESETS : [];
+      let savedSounds = loadSavedSounds();
+
+      let currentSound = {
+        name: "Personalizado",
+        pitchJitter: 0.05,
+        layers: [
+          { type: "sine", delayMs: 0, freqStart: 440, freqEnd: 220, durationMs: 120, filterType: "lowpass", filterFreq: 1800, volume: 0.35 }
+        ]
+      };
+
+      const els = {
+        muteBtn: document.getElementById("muteBtn"),
+        presetList: document.getElementById("presetList"),
+        presetCount: document.getElementById("presetCount"),
+        activePresetLabel: document.getElementById("activePresetLabel"),
+        layerTabs: document.getElementById("layerTabs"),
+        typeSelect: document.getElementById("typeSelect"),
+        filterTypeSelect: document.getElementById("filterTypeSelect"),
+        freqStart: document.getElementById("freqStart"),
+        freqEnd: document.getElementById("freqEnd"),
+        durationMs: document.getElementById("durationMs"),
+        delayMs: document.getElementById("delayMs"),
+        filterFreq: document.getElementById("filterFreq"),
+        volume: document.getElementById("volume"),
+        pitchJitter: document.getElementById("pitchJitter"),
+        freqStartVal: document.getElementById("freqStartVal"),
+        freqEndVal: document.getElementById("freqEndVal"),
+        durationMsVal: document.getElementById("durationMsVal"),
+        delayMsVal: document.getElementById("delayMsVal"),
+        filterFreqVal: document.getElementById("filterFreqVal"),
+        volumeVal: document.getElementById("volumeVal"),
+        pitchJitterVal: document.getElementById("pitchJitterVal"),
+        playBtn: document.getElementById("playBtn"),
+        playBurstBtn: document.getElementById("playBurstBtn"),
+        randomizeBtn: document.getElementById("randomizeBtn"),
+        saveNameInput: document.getElementById("saveNameInput"),
+        saveBtn: document.getElementById("saveBtn"),
+        statusMsg: document.getElementById("statusMsg"),
+        savedList: document.getElementById("savedList"),
+        savedCount: document.getElementById("savedCount"),
+        copyJsonBtn: document.getElementById("copyJsonBtn"),
+        exportJsonBtn: document.getElementById("exportJsonBtn"),
+        clearSavedBtn: document.getElementById("clearSavedBtn")
+      };
+
+      function ensureAudioContext() {
+        if (!audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new Ctx();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+      }
+
+      function cloneSound(sound) {
+        return JSON.parse(JSON.stringify(sound));
+      }
+
+      function loadSoundIntoEditor(sound, label) {
+        currentSound = cloneSound(sound);
+        if (!Array.isArray(currentSound.layers) || currentSound.layers.length === 0) {
+          currentSound.layers = [
+            { type: "sine", delayMs: 0, freqStart: 440, freqEnd: 220, durationMs: 120, filterType: "lowpass", filterFreq: 1800, volume: 0.35 }
+          ];
+        }
+        activeLayerIdx = 0;
+        els.activePresetLabel.textContent = label || currentSound.name || "Personalizado";
+        els.pitchJitter.value = currentSound.pitchJitter ?? 0.05;
+        renderLayerTabs();
+        syncControlsFromActiveLayer();
+      }
+
+      function syncControlsFromActiveLayer() {
+        const layer = currentSound.layers[activeLayerIdx];
+        if (!layer) return;
+        els.typeSelect.value = layer.type || "sine";
+        els.filterTypeSelect.value = layer.filterType || "lowpass";
+        els.freqStart.value = layer.freqStart ?? 440;
+        els.freqEnd.value = layer.freqEnd ?? 220;
+        els.durationMs.value = layer.durationMs ?? 120;
+        els.delayMs.value = layer.delayMs ?? 0;
+        els.filterFreq.value = layer.filterFreq ?? 1800;
+        els.volume.value = layer.volume ?? 0.35;
+        updateValueLabels();
+      }
+
+      function syncActiveLayerFromControls() {
+        const layer = currentSound.layers[activeLayerIdx];
+        if (!layer) return;
+        layer.type = els.typeSelect.value;
+        layer.filterType = els.filterTypeSelect.value;
+        layer.freqStart = Number(els.freqStart.value);
+        layer.freqEnd = Number(els.freqEnd.value);
+        layer.durationMs = Number(els.durationMs.value);
+        layer.delayMs = Number(els.delayMs.value);
+        layer.filterFreq = Number(els.filterFreq.value);
+        layer.volume = Number(els.volume.value);
+        currentSound.pitchJitter = Number(els.pitchJitter.value);
+        updateValueLabels();
+      }
+
+      function updateValueLabels() {
+        els.freqStartVal.textContent = `${els.freqStart.value} Hz`;
+        els.freqEndVal.textContent = `${els.freqEnd.value} Hz`;
+        els.durationMsVal.textContent = `${els.durationMs.value} ms`;
+        els.delayMsVal.textContent = `${els.delayMs.value} ms`;
+        els.filterFreqVal.textContent = `${els.filterFreq.value} Hz`;
+        els.volumeVal.textContent = `${Math.round(Number(els.volume.value) * 100)}%`;
+        els.pitchJitterVal.textContent = `${Math.round(Number(els.pitchJitter.value) * 100)}%`;
+      }
+
+      function renderLayerTabs() {
+        els.layerTabs.innerHTML = "";
+        currentSound.layers.forEach((_, idx) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "small" + (idx === activeLayerIdx ? " tab-active" : "");
+          btn.textContent = `Capa ${idx + 1}`;
+          btn.addEventListener("click", () => {
+            activeLayerIdx = idx;
+            renderLayerTabs();
+            syncControlsFromActiveLayer();
+          });
+          els.layerTabs.appendChild(btn);
+        });
+
+        if (currentSound.layers.length < 4) {
+          const addBtn = document.createElement("button");
+          addBtn.type = "button";
+          addBtn.className = "small";
+          addBtn.textContent = "+ Capa";
+          addBtn.addEventListener("click", () => {
+            currentSound.layers.push({
+              type: "triangle",
+              delayMs: 30,
+              freqStart: 300,
+              freqEnd: 150,
+              durationMs: 80,
+              filterType: "lowpass",
+              filterFreq: 1500,
+              volume: 0.25
+            });
+            activeLayerIdx = currentSound.layers.length - 1;
+            renderLayerTabs();
+            syncControlsFromActiveLayer();
+          });
+          els.layerTabs.appendChild(addBtn);
+        }
+
+        if (currentSound.layers.length > 1) {
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.className = "small danger";
+          removeBtn.textContent = "- Quitar capa";
+          removeBtn.addEventListener("click", () => {
+            currentSound.layers.splice(activeLayerIdx, 1);
+            activeLayerIdx = Math.max(0, activeLayerIdx - 1);
+            renderLayerTabs();
+            syncControlsFromActiveLayer();
+          });
+          els.layerTabs.appendChild(removeBtn);
+        }
+      }
+
+      function playSound(sound) {
+        if (isMuted || !sound || !Array.isArray(sound.layers)) return;
+        ensureAudioContext();
+
+        const baseTime = audioCtx.currentTime;
+        const jitter = sound.pitchJitter ? 1 + (Math.random() * 2 - 1) * sound.pitchJitter : 1;
+
+        sound.layers.forEach((layer) => {
+          const startTime = baseTime + (layer.delayMs || 0) / 1000;
+          const durationSec = Math.max(0.015, (layer.durationMs || 100) / 1000);
+          const fStart = Math.max(20, (layer.freqStart || 440) * jitter);
+          const fEnd = Math.max(20, (layer.freqEnd || 220) * jitter);
+
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.setValueAtTime(0.0001, startTime);
+          gainNode.gain.linearRampToValueAtTime(layer.volume ?? 0.3, startTime + 0.008);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + durationSec);
+
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = layer.filterType || "lowpass";
+          filter.frequency.setValueAtTime(layer.filterFreq || 1800, startTime);
+
+          filter.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+
+          if (layer.type === "noise") {
+            const sampleCount = Math.floor(audioCtx.sampleRate * durationSec);
+            const buffer = audioCtx.createBuffer(1, sampleCount, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < sampleCount; i++) {
+              data[i] = Math.random() * 2 - 1;
+            }
+            const noiseSource = audioCtx.createBufferSource();
+            noiseSource.buffer = buffer;
+            filter.frequency.setValueAtTime(fStart, startTime);
+            filter.frequency.exponentialRampToValueAtTime(fEnd, startTime + durationSec);
+            noiseSource.connect(filter);
+            noiseSource.start(startTime);
+            noiseSource.stop(startTime + durationSec);
+          } else {
+            const osc = audioCtx.createOscillator();
+            osc.type = layer.type || "sine";
+            osc.frequency.setValueAtTime(fStart, startTime);
+            osc.frequency.exponentialRampToValueAtTime(fEnd, startTime + durationSec);
+            osc.connect(filter);
+            osc.start(startTime);
+            osc.stop(startTime + durationSec);
+          }
+        });
+      }
+
+      function loadSavedSounds() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function persistSavedSounds() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedSounds));
+      }
+
+      function showStatus(msg) {
+        els.statusMsg.textContent = msg;
+        setTimeout(() => {
+          if (els.statusMsg.textContent === msg) els.statusMsg.textContent = "";
+        }, 2500);
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function renderPresets() {
+        els.presetList.innerHTML = "";
+        els.presetCount.textContent = String(presets.length);
+
+        presets.forEach((preset) => {
+          const card = document.createElement("div");
+          card.className = "item-card" + (activePresetId === preset.id ? " active" : "");
+
+          const info = document.createElement("div");
+          info.className = "item-info";
+          info.innerHTML = `
+            <div class="item-name">${escapeHtml(preset.name)}</div>
+            <div class="item-meta">${escapeHtml(preset.category || "General")} - ${preset.layers.length} capa(s)</div>
+          `;
+
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+
+          const playBtn = document.createElement("button");
+          playBtn.className = "small primary";
+          playBtn.textContent = "Play";
+          playBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            playSound(preset);
+          });
+
+          actions.appendChild(playBtn);
+          card.appendChild(info);
+          card.appendChild(actions);
+
+          card.addEventListener("click", () => {
+            activePresetId = preset.id;
+            loadSoundIntoEditor(preset, preset.name);
+            els.saveNameInput.value = preset.id + "_custom";
+            playSound(preset);
+            renderPresets();
+          });
+
+          els.presetList.appendChild(card);
+        });
+      }
+
+      function renderSaved() {
+        els.savedList.innerHTML = "";
+        els.savedCount.textContent = String(savedSounds.length);
+
+        if (savedSounds.length === 0) {
+          els.savedList.innerHTML = '<div class="empty-state">Aun no has guardado sonidos. Ajusta uno y pulsa "Guardar en registro".</div>';
+          return;
+        }
+
+        savedSounds.forEach((item, index) => {
+          const card = document.createElement("div");
+          card.className = "item-card";
+
+          const info = document.createElement("div");
+          info.className = "item-info";
+          info.innerHTML = `
+            <div class="item-name">${escapeHtml(item.name)}</div>
+            <div class="item-meta">${item.layers.length} capa(s) guardadas</div>
+          `;
+
+          const actions = document.createElement("div");
+          actions.className = "item-actions";
+
+          const playBtn = document.createElement("button");
+          playBtn.className = "small primary";
+          playBtn.textContent = "Play";
+          playBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            playSound(item);
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "small danger";
+          delBtn.textContent = "X";
+          delBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            savedSounds.splice(index, 1);
+            persistSavedSounds();
+            renderSaved();
+          });
+
+          actions.appendChild(playBtn);
+          actions.appendChild(delBtn);
+          card.appendChild(info);
+          card.appendChild(actions);
+
+          card.addEventListener("click", () => {
+            activePresetId = null;
+            loadSoundIntoEditor(item, item.name);
+            els.saveNameInput.value = item.name;
+            playSound(item);
+            renderPresets();
+          });
+
+          els.savedList.appendChild(card);
+        });
+      }
+
+      [
+        els.typeSelect,
+        els.filterTypeSelect,
+        els.freqStart,
+        els.freqEnd,
+        els.durationMs,
+        els.delayMs,
+        els.filterFreq,
+        els.volume,
+        els.pitchJitter
+      ].forEach((el) => {
+        el.addEventListener("input", syncActiveLayerFromControls);
+        el.addEventListener("change", syncActiveLayerFromControls);
+      });
+
+      els.muteBtn.addEventListener("click", () => {
+        isMuted = !isMuted;
+        els.muteBtn.textContent = isMuted ? "Audio: Silenciado" : "Audio: Activo";
+      });
+
+      els.playBtn.addEventListener("click", () => playSound(currentSound));
+
+      els.playBurstBtn.addEventListener("click", () => {
+        playSound(currentSound);
+        setTimeout(() => playSound(currentSound), 150);
+        setTimeout(() => playSound(currentSound), 300);
+      });
+
+      els.randomizeBtn.addEventListener("click", () => {
+        currentSound.layers.forEach((layer) => {
+          const factor = () => 0.75 + Math.random() * 0.5;
+          layer.freqStart = Math.round(Math.min(3500, Math.max(30, layer.freqStart * factor())));
+          layer.freqEnd = Math.round(Math.min(3500, Math.max(20, layer.freqEnd * factor())));
+          layer.durationMs = Math.round(Math.min(800, Math.max(20, layer.durationMs * (0.8 + Math.random() * 0.4))));
+          layer.filterFreq = Math.round(Math.min(6000, Math.max(100, layer.filterFreq * factor())));
+        });
+        syncControlsFromActiveLayer();
+        playSound(currentSound);
+      });
+
+      els.saveBtn.addEventListener("click", () => {
+        const name = els.saveNameInput.value.trim() || `sonido_${savedSounds.length + 1}`;
+        const entry = {
+          name,
+          savedAt: new Date().toISOString(),
+          pitchJitter: currentSound.pitchJitter,
+          layers: cloneSound(currentSound.layers)
+        };
+        savedSounds.unshift(entry);
+        persistSavedSounds();
+        renderSaved();
+        showStatus(`Guardado "${name}" en el registro.`);
+      });
+
+      els.copyJsonBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(savedSounds, null, 2));
+          showStatus("JSON copiado al portapapeles.");
+        } catch {
+          showStatus("No se pudo copiar; usa Descargar JSON.");
+        }
+      });
+
+      els.exportJsonBtn.addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify(savedSounds, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "sfx-registro.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        showStatus("Archivo sfx-registro.json descargado.");
+      });
+
+      els.clearSavedBtn.addEventListener("click", () => {
+        if (savedSounds.length === 0) return;
+        savedSounds = [];
+        persistSavedSounds();
+        renderSaved();
+        showStatus("Registro limpiado.");
+      });
+
+      if (presets.length > 0) {
+        activePresetId = presets[0].id;
+        loadSoundIntoEditor(presets[0], presets[0].name);
+        els.saveNameInput.value = presets[0].id + "_custom";
+      } else {
+        renderLayerTabs();
+        syncControlsFromActiveLayer();
+      }
+      renderPresets();
+      renderSaved();
+    })();
+  </script>
+</body>
+</html>
