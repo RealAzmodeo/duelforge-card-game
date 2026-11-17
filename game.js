@@ -1366,6 +1366,22 @@ function buildCardStatIcons(card) {
     }
   }
 
+  const hasTextEffect =
+    pills.length === 0 ||
+    Boolean(complexNote) ||
+    card.type === "Reliquia" ||
+    card.type === "Equipo" ||
+    Boolean(card.onDeath) ||
+    Boolean(card.upkeep) ||
+    Boolean(card.pierce) ||
+    Boolean(card.stealth);
+
+  if (hasTextEffect) {
+    pills.push(
+      '<span class="stat-ic stat-scroll" title="Pasa el cursor para leer el efecto"><img src="assets/ui/icon_scroll.png" alt="Texto" /></span>'
+    );
+  }
+
   return {
     iconsHtml: `<div class="card-stat-icons">${pills.join("")}</div>`,
     complexNote

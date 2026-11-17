@@ -195,6 +195,14 @@
 
     syncCustomElements(data._customElements);
 
+    // Reset tutorial elements so step-specific overrides do not leak across steps
+    document.querySelectorAll("#ftue-popover, #ftue-pointer").forEach((el) => {
+      el.style.translate = "";
+      el.style.scale = "";
+      el.style.rotate = "";
+      el.style.zIndex = "";
+    });
+
     for (const prevSel of appliedSelectors) {
       if (!data[prevSel]) {
         document.querySelectorAll(prevSel).forEach((el) => resetElementStyles(el, prevSel));
@@ -202,7 +210,14 @@
       }
     }
 
-    for (const [selector, cfg] of Object.entries(data)) {
+    // Apply general selectors first, then [data-ftue-step=...] step-specific overrides
+    const entries = Object.entries(data).sort(([a], [b]) => {
+      const aStep = a.includes("data-ftue-step") ? 1 : 0;
+      const bStep = b.includes("data-ftue-step") ? 1 : 0;
+      return aStep - bStep;
+    });
+
+    for (const [selector, cfg] of entries) {
       if (!cfg || selector.startsWith("_")) continue;
       try {
         const nodes = document.querySelectorAll(selector);
@@ -242,20 +257,35 @@
   const isEditor = new URLSearchParams(window.location.search).get("editor") === "1";
   if (!isEditor) return;
 
-  // Suppress FTUE overlays inside editor preview
+  // Suppress automatic FTUE triggers inside editor preview (manual previewStep stays active)
   if (window.FTUE) {
     const noop = () => {};
     window.FTUE.onDeckSelectOpen = noop;
     window.FTUE.onBoosterOpen = noop;
+    window.FTUE.onBoosterRevealed = noop;
     window.FTUE.onMapOpen = noop;
     window.FTUE.onCombatOpen = noop;
+    window.FTUE.onCombatTurnStart = noop;
+    window.FTUE.onCardPlayed = noop;
+    window.FTUE.onCardDrawnOrHandCheck = noop;
+    window.FTUE.checkCombatContextualTips = noop;
+    window.FTUE.onMarketBought = noop;
+    window.FTUE.onUnitAttacked = noop;
+    window.FTUE.onTurnEnd = noop;
+    window.FTUE.onReactionOpen = noop;
     window.FTUE.onRestOpen = noop;
+    window.FTUE.onShopOpen = noop;
+    window.FTUE.onEventOpen = noop;
+    window.FTUE.dismiss();
   }
 
   const styleEl = document.createElement("style");
   styleEl.textContent = `
-    #ftue-overlay, #ftue-cheatsheet-modal {
+    #ftue-cheatsheet-modal {
       display: none !important;
+    }
+    #ftue-pointer {
+      pointer-events: auto !important;
     }
     .editor-hover-el {
       outline: 1px dashed #60a5fa !important;
@@ -338,6 +368,7 @@
   let selectedSelector = null;
   let knownSelectors = [];
   let activePrefab = null;
+  let activeTutorialStep = null;
   let freePick = true;
   let dragState = null;
   let runSeeded = false;
@@ -481,6 +512,20 @@
 
     let cur = startEl;
     while (cur && cur !== document.body) {
+      if (activeTutorialStep) {
+        if (cur.id === "ftue-popover") {
+          return {
+            el: cur,
+            selector: `#ftue-overlay[data-ftue-step="${activeTutorialStep.key}"] #ftue-popover`,
+          };
+        }
+        if (cur.id === "ftue-pointer") {
+          return {
+            el: cur,
+            selector: `#ftue-overlay[data-ftue-step="${activeTutorialStep.key}"] #ftue-pointer`,
+          };
+        }
+      }
       if (cur.classList && cur.classList.contains("custom-scene-el") && cur.id) {
         return { el: cur, selector: `#${CSS.escape(cur.id)}` };
       }
@@ -583,6 +628,10 @@
     (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (e.target && e.target.closest && e.target.closest("#ftue-popover")) {
+        window.parent.postMessage({ type: "editor:dblclick", selector: "#ftue-popover" }, "*");
+        return;
+      }
       const hit = findBestTarget(e.target);
       if (hit) {
         window.parent.postMessage({ type: "editor:dblclick", selector: hit.selector }, "*");
@@ -801,6 +850,48 @@
     }
   }
 
+  function setTutorialPreview(enabled, stepConfig) {
+    activeTutorialStep = enabled && stepConfig ? stepConfig : null;
+    const reactionBanner = document.getElementById("reaction-banner");
+    if (reactionBanner) reactionBanner.classList.add("hidden");
+
+    if (!enabled || !stepConfig) {
+      window.FTUE?.dismiss();
+      return;
+    }
+
+    if (stepConfig.key === "combatReaction" && reactionBanner) {
+      reactionBanner.classList.remove("hidden");
+      const enemyCardEl = document.getElementById("reaction-enemy-card");
+      if (enemyCardEl && enemyCardEl.children.length === 0 && typeof window.createVisualCardEl === "function" && typeof window.CARD_CATALOG === "object") {
+        const sample = window.CARD_CATALOG.golpe || Object.values(window.CARD_CATALOG)[0];
+        if (sample) enemyCardEl.appendChild(window.createVisualCardEl(sample));
+      }
+    } else if (stepConfig.key === "boosterPack") {
+      document.getElementById("booster-pack-stage")?.classList.remove("hidden", "opening");
+      document.getElementById("booster-choices")?.classList.add("hidden");
+    } else if (stepConfig.key === "boosterPick") {
+      document.getElementById("booster-pack-stage")?.classList.add("hidden");
+      const choicesEl = document.getElementById("booster-choices");
+      if (choicesEl) {
+        choicesEl.classList.remove("hidden");
+        if (choicesEl.children.length === 0 && typeof window.createVisualCardEl === "function" && typeof window.CARD_CATALOG === "object") {
+          Object.values(window.CARD_CATALOG).slice(0, 3).forEach((c) => {
+            choicesEl.appendChild(window.createVisualCardEl(c));
+          });
+        }
+      }
+    }
+
+    if (window.FTUE && typeof window.FTUE.previewStep === "function") {
+      window.FTUE.previewStep(stepConfig);
+      requestAnimationFrame(() => {
+        applySceneLayout(window.SCENE_LAYOUT);
+        updateGizmo();
+      });
+    }
+  }
+
   window.addEventListener("message", (event) => {
     const msg = event.data;
     if (!msg || typeof msg !== "object") return;
@@ -812,11 +903,22 @@
         window.SCENE_LAYOUT = msg.layout;
         applySceneLayout(msg.layout);
       }
+      if (msg.tutorial) {
+        setTutorialPreview(msg.tutorial.enabled, msg.tutorial.step);
+      }
       updateGizmo();
     } else if (msg.type === "editor:setScene") {
       setPrefabHighlight(null);
       setScene(msg.sceneId);
       if (Array.isArray(msg.knownSelectors)) knownSelectors = msg.knownSelectors;
+      if (msg.tutorial) {
+        setTutorialPreview(msg.tutorial.enabled, msg.tutorial.step);
+      } else {
+        setTutorialPreview(false, null);
+      }
+      highlightSelected(null);
+    } else if (msg.type === "editor:setTutorial") {
+      setTutorialPreview(msg.enabled, msg.step);
       highlightSelected(null);
     } else if (msg.type === "editor:setPrefab") {
       setPrefabHighlight(msg.prefab);

@@ -106,14 +106,14 @@
     els.popover.style.top = "";
     els.popover.style.transform = "";
 
-    if (!target || target.offsetParent === null) {
+    const rect = target ? target.getBoundingClientRect() : null;
+    if (!target || !rect || (rect.width === 0 && rect.height === 0)) {
       els.spotlight.style.opacity = "0";
       els.pointer?.classList.add("hidden");
       els.popover.classList.remove("dock-right");
       return;
     }
 
-    const rect = target.getBoundingClientRect();
     const pad = activeStep.pad ?? 8;
     const sLeft = Math.max(4, rect.left - pad);
     const sTop = Math.max(4, rect.top - pad);
@@ -152,16 +152,12 @@
     }
   }
 
-  function showStep(stepConfig) {
-    if (!isEnabled()) return false;
-    if (stepConfig.key && hasSeen(stepConfig.key)) return false;
-
+  function renderStepUI(stepConfig) {
     const els = getEls();
     if (!els.overlay) return false;
 
     activeStep = stepConfig;
-    if (stepConfig.key) markSeen(stepConfig.key);
-
+    els.overlay.dataset.ftueStep = stepConfig.key || "";
     els.badge.textContent = stepConfig.badge || "GUIA RAPIDA";
     els.text.textContent = stepConfig.text;
 
@@ -173,10 +169,29 @@
     }
 
     els.overlay.classList.remove("hidden");
+    if (typeof window.applySceneLayout === "function") {
+      window.applySceneLayout();
+    }
     requestAnimationFrame(() => {
       positionStep();
     });
     return true;
+  }
+
+  function showStep(stepConfig) {
+    if (!isEnabled()) return false;
+    if (stepConfig.key && hasSeen(stepConfig.key)) return false;
+
+    if (stepConfig.key) markSeen(stepConfig.key);
+    return renderStepUI(stepConfig);
+  }
+
+  function previewStep(stepConfig) {
+    if (!stepConfig) {
+      dismissCurrent();
+      return false;
+    }
+    return renderStepUI(stepConfig);
   }
 
   function dismissCurrent() {
@@ -247,6 +262,8 @@
     isEnabled,
     hasSeen,
     dismiss: dismissCurrent,
+    previewStep,
+    reposition: positionStep,
     skipAll,
     reset,
     openCheatsheet,

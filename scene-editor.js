@@ -83,6 +83,162 @@
         { name: "Medallon Vida", selector: ".unit-token .hp-medallion" },
       ],
     },
+    "#ftue-popover": {
+      name: "Panel Tutorial (Mentor + Burbuja)",
+      children: [
+        { name: "Marco Mentor", selector: ".ftue-mentor-frame" },
+        { name: "Imagen Mentor", selector: ".ftue-mentor-img" },
+        { name: "Caja Burbuja", selector: ".ftue-bubble-box" },
+        { name: "Etiqueta Paso", selector: "#ftue-badge" },
+        { name: "Texto Tutorial", selector: "#ftue-text" },
+        { name: "Boton Saltar", selector: "#ftue-skip-btn" },
+        { name: "Boton Entendido", selector: "#ftue-ok-btn" },
+      ],
+    },
+  };
+
+  const TUTORIAL_STEPS = {
+    deck: [
+      {
+        key: "deckSelect",
+        label: "Paso 1: Elegir Mazo",
+        badge: "PASO 1 - MAZO",
+        target: '.deck-choice-card[data-faction="forja"]',
+        showOk: true,
+        okLabel: "Entendido",
+        text: "Forja es ideal para empezar. Pasa el raton por cualquier carta para ver que hace.",
+      },
+    ],
+    booster: [
+      {
+        key: "boosterPack",
+        label: "Paso 2A: Abrir Sobre",
+        badge: "PASO 2 - SOBRE",
+        target: "#booster-pack-stage",
+        showOk: false,
+        text: "Haz clic en el sobre para abrirlo.",
+      },
+      {
+        key: "boosterPick",
+        label: "Paso 2B: Elegir Carta",
+        badge: "PASO 2 - SOBRE",
+        target: "#booster-choices",
+        showOk: false,
+        text: "Elige 1 carta permanente para anadirla a tu mazo.",
+      },
+    ],
+    map: [
+      {
+        key: "mapIntro",
+        label: "Paso 3: Ruta del Mapa",
+        badge: "PASO 3 - RUTA",
+        target: ".map-node.available",
+        showOk: false,
+        text: "Tu meta es el Jefe arriba. Haz clic en el primer Combate.",
+      },
+    ],
+    duel: [
+      {
+        key: "combatHand",
+        label: "1. Mano y Energia",
+        badge: "COMBATE 1/3",
+        target: "#player-hand",
+        showOk: false,
+        text: "Haz clic en una carta de tu mano para jugarla usando Energia.",
+      },
+      {
+        key: "combatSummonWait",
+        label: "2. Espera de Unidades",
+        badge: "UNIDADES",
+        target: "#player-slots",
+        showOk: true,
+        okLabel: "Entendido",
+        text: "Las unidades descansan 1 turno al entrar (salvo Prisa).",
+      },
+      {
+        key: "combatAttack",
+        label: "3. Ataque de Unidad",
+        badge: "ATAQUE",
+        target: "#player-slots .unit-slot",
+        showOk: false,
+        text: "Tu unidad ya esta lista. Haz clic en ella para atacar.",
+      },
+      {
+        key: "combatMarket",
+        label: "4. Mercado Vivo",
+        badge: "MERCADO VIVO",
+        target: ".market-sidebar",
+        showOk: false,
+        text: "Tienes Oro: compra una carta aqui. Va directo a tu mano solo por este combate.",
+      },
+      {
+        key: "combatEndTurn",
+        label: "5. Fin de Turno",
+        badge: "TURNO",
+        target: "#end-turn-btn",
+        showOk: false,
+        text: "Sin mas jugadas disponibles. Pulsa Fin de Turno.",
+      },
+      {
+        key: "combatReaction",
+        label: "6. Defensa / Reaccion",
+        badge: "DEFENSA (PAUSADA)",
+        target: "#reaction-banner",
+        showOk: false,
+        text: "El rival ataca: haz clic en una unidad tuya para bloquear o pulsa Dejar Pasar.",
+      },
+      {
+        key: "equipCard",
+        label: "7. Carta de Equipo",
+        badge: "EQUIPO",
+        target: "#player-hand",
+        showOk: true,
+        okLabel: "Entendido",
+        text: "Equipo: jugalo y luego haz clic en una unidad tuya para mejorarlo.",
+      },
+      {
+        key: "relicCard",
+        label: "8. Carta Reliquia",
+        badge: "RELIQUIA",
+        target: "#player-relics",
+        showOk: true,
+        okLabel: "Entendido",
+        text: "Reliquia: activa efectos pasivos junto a tu heroe varios turnos.",
+      },
+    ],
+    rest: [
+      {
+        key: "restNode",
+        label: "Descanso en Fogata",
+        badge: "DESCANSO",
+        target: "#rest-fire-choices",
+        showOk: true,
+        okLabel: "Entendido",
+        text: "Elige una ventaja en la hoguera o abre el Inventario para apartar cartas.",
+      },
+    ],
+    shop: [
+      {
+        key: "shopNode",
+        label: "Tienda del Mercader",
+        badge: "TIENDA",
+        target: "#shop-cards-grid",
+        showOk: true,
+        okLabel: "Entendido",
+        text: "Aqui gastas tu Oro de Run en cartas y mejoras permanentes.",
+      },
+    ],
+    event: [
+      {
+        key: "eventNode",
+        label: "Evento Misterioso",
+        badge: "EVENTO",
+        target: "#event-choices",
+        showOk: true,
+        okLabel: "Entendido",
+        text: "Cada opcion tiene riesgo y recompensa. Elige tu camino.",
+      },
+    ],
   };
 
   const SCENES = [
@@ -256,6 +412,8 @@
   let currentZoom = "fit";
   let previewWidth = 1920;
   let previewHeight = 1080;
+  let tutorialEnabled = false;
+  let selectedTutorialStepKey = "";
 
   // DOM refs
   const sceneTabsEl = document.getElementById("scene-tabs");
@@ -265,6 +423,8 @@
   const prefabExitBtn = document.getElementById("prefab-exit-btn");
 
   const stageLabelEl = document.getElementById("stage-label");
+  const tutorialToggle = document.getElementById("tutorial-toggle");
+  const tutorialStepSelect = document.getElementById("tutorial-step-select");
   const gameFrame = document.getElementById("game-frame");
   const iframeViewport = document.getElementById("iframe-viewport");
   const iframeScaler = document.getElementById("iframe-scaler");
@@ -347,6 +507,13 @@
   function getElementLabel(selector) {
     const custom = findCustomBySelector(selector);
     if (custom) return custom.name || custom.id;
+    const stepMatch = selector && selector.match(/^#ftue-overlay\[data-ftue-step="([^"]+)"\]\s+(.+)$/);
+    if (stepMatch) {
+      const part = stepMatch[2] === "#ftue-pointer" ? "Flecha Tutorial" : "Panel Tutorial";
+      return `${part} (Paso: ${stepMatch[1]})`;
+    }
+    if (selector === "#ftue-popover") return "Panel Tutorial (Global - Prefab)";
+    if (selector === "#ftue-pointer") return "Flecha Tutorial (Global)";
     for (const p of Object.values(PREFABS)) {
       const found = p.children.find((c) => c.selector === selector);
       if (found) return found.name;
@@ -357,6 +524,74 @@
     }
     return selector;
   }
+
+  function getTutorialPayloadForScene() {
+    const steps = TUTORIAL_STEPS[currentSceneId] || [];
+    if (!tutorialEnabled || steps.length === 0) {
+      return { enabled: false, step: null };
+    }
+    const found = steps.find((s) => s.key === selectedTutorialStepKey) || steps[0];
+    selectedTutorialStepKey = found.key;
+    return { enabled: true, step: found };
+  }
+
+  function renderTutorialControls() {
+    const steps = TUTORIAL_STEPS[currentSceneId] || [];
+    if (!tutorialEnabled) {
+      tutorialStepSelect.classList.add("hidden");
+      return;
+    }
+    tutorialStepSelect.classList.remove("hidden");
+    tutorialStepSelect.innerHTML = "";
+    if (steps.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Sin tutorial en esta escena";
+      tutorialStepSelect.appendChild(opt);
+      tutorialStepSelect.disabled = true;
+      selectedTutorialStepKey = "";
+      return;
+    }
+    tutorialStepSelect.disabled = false;
+    if (!steps.some((s) => s.key === selectedTutorialStepKey)) {
+      selectedTutorialStepKey = steps[0].key;
+    }
+    steps.forEach((st) => {
+      const opt = document.createElement("option");
+      opt.value = st.key;
+      opt.textContent = st.label;
+      if (st.key === selectedTutorialStepKey) opt.selected = true;
+      tutorialStepSelect.appendChild(opt);
+    });
+  }
+
+  function pushTutorialToIframe() {
+    if (!gameFrame.contentWindow) return;
+    const payload = getTutorialPayloadForScene();
+    gameFrame.contentWindow.postMessage(
+      {
+        type: "editor:setTutorial",
+        enabled: payload.enabled,
+        step: payload.step,
+      },
+      "*"
+    );
+  }
+
+  tutorialToggle.addEventListener("change", () => {
+    tutorialEnabled = tutorialToggle.checked;
+    renderTutorialControls();
+    renderElementsList();
+    pushTutorialToIframe();
+  });
+
+  tutorialStepSelect.addEventListener("change", () => {
+    selectedTutorialStepKey = tutorialStepSelect.value;
+    selectedSelector = null;
+    renderElementsList();
+    renderInspector();
+    pushTutorialToIframe();
+  });
 
   function setStatus(state, text) {
     saveStatusEl.className = `save-status ${state}`;
@@ -468,7 +703,35 @@
         .filter((c) => c.sceneId === currentSceneId)
         .map((c) => ({ name: c.name || c.id, selector: `#${c.id}`, isCustom: true }));
 
+      const tut = getTutorialPayloadForScene();
+      const tutItems = [];
+      if (tut.enabled && tut.step) {
+        tutItems.push(
+          {
+            name: `Tutorial: Panel (${tut.step.key})`,
+            selector: `#ftue-overlay[data-ftue-step="${tut.step.key}"] #ftue-popover`,
+            isPrefab: false,
+          },
+          {
+            name: `Tutorial: Flecha (${tut.step.key})`,
+            selector: `#ftue-overlay[data-ftue-step="${tut.step.key}"] #ftue-pointer`,
+            isPrefab: false,
+          },
+          {
+            name: "Tutorial: Panel Global (Prefab)",
+            selector: "#ftue-popover",
+            isPrefab: true,
+          },
+          {
+            name: "Tutorial: Flecha Global",
+            selector: "#ftue-pointer",
+            isPrefab: false,
+          }
+        );
+      }
+
       items = [
+        ...tutItems,
         ...customs,
         ...sc.elements.map((e) => ({
           ...e,
@@ -541,6 +804,7 @@
     const sc = getSceneObj(sceneId);
     stageLabelEl.textContent = `Escena: ${sc.label}`;
     renderSceneTabs();
+    renderTutorialControls();
     renderElementsList();
     renderInspector();
 
@@ -550,6 +814,7 @@
           type: "editor:setScene",
           sceneId,
           knownSelectors: sc.elements.map((e) => e.selector),
+          tutorial: getTutorialPayloadForScene(),
         },
         "*"
       );
@@ -956,12 +1221,14 @@
 
     if (msg.type === "editor:ready") {
       const sc = getSceneObj(currentSceneId);
+      renderTutorialControls();
       gameFrame.contentWindow.postMessage(
         {
           type: "editor:init",
           sceneId: currentSceneId,
           knownSelectors: sc.elements.map((e) => e.selector),
           layout,
+          tutorial: getTutorialPayloadForScene(),
         },
         "*"
       );
