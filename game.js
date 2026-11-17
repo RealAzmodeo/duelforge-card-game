@@ -757,7 +757,41 @@ function getSelectedPlayerCardBack() {
 }
 
 function getCardBackTopSrc(baseSrc) {
-  return String(baseSrc || "").replace(/\.png$/i, "_top.png");
+  const src = String(baseSrc || "");
+  if (!src || /assets\/ui\//i.test(src)) return "";
+  return src.replace(/\.png$/i, "_top.png");
+}
+
+function applyCardBackLayers(baseEl, topEl, baseSrc) {
+  if (!baseSrc) return;
+  if (baseEl) baseEl.src = baseSrc;
+  if (topEl) {
+    const topSrc = getCardBackTopSrc(baseSrc);
+    if (!topSrc) {
+      topEl.removeAttribute("src");
+      topEl.style.display = "none";
+    } else {
+      topEl.style.display = "";
+      topEl.onerror = () => {
+        topEl.style.display = "none";
+      };
+      topEl.src = topSrc;
+    }
+  }
+}
+
+function renderCardBack2LayerMarkup(baseSrc, altText = "Dorso", extraClass = "", tag = "div") {
+  const topSrc = getCardBackTopSrc(baseSrc);
+  const cls = extraClass ? `${extraClass} card-back-2layer` : "card-back-2layer";
+  const topTag = topSrc
+    ? `<img class="card-back-top" src="${topSrc}" alt="" onerror="this.style.display='none'" />`
+    : "";
+  return `
+    <${tag} class="${cls}">
+      <img class="card-back-base" src="${baseSrc}" alt="${altText}" />
+      ${topTag}
+    </${tag}>
+  `;
 }
 
 function renderCardBackSelector() {
@@ -774,15 +808,11 @@ function renderCardBackSelector() {
     btn.type = "button";
     btn.className = `card-back-choice ${selectedCardBackId === b.id ? "selected" : ""} ${!isUnlocked ? "locked" : ""}`;
     const previewSrc = b.src || `assets/card_backs/back_${selectedStarterDeckId}.png`;
-    const topSrc = getCardBackTopSrc(previewSrc);
     btn.title = !isUnlocked
       ? `Bloqueado: ${unlockedBacks.getCardBackRequirement(b.id)}`
       : (b.id === "auto" ? "Dorso automatico segun tu faccion" : `Dorso: ${b.label}`);
     btn.innerHTML = `
-      <span class="card-back-2layer">
-        <img class="card-back-base" src="${previewSrc}" alt="${b.label}" />
-        <img class="card-back-top" src="${topSrc}" alt="" onerror="this.style.display='none'" />
-      </span>
+      ${renderCardBack2LayerMarkup(previewSrc, b.label, "", "span")}
       <span>${isUnlocked ? b.label : "BLOQ."}</span>
     `;
     if (isUnlocked) {
@@ -1143,7 +1173,8 @@ function startStageWithConfig(stage, tierIdx = 0) {
   const enemyFrameEl = document.getElementById("enemy-frame-img");
   if (enemyFrameEl && stage.frame) enemyFrameEl.src = stage.frame;
   const playerDeckImgEl = document.getElementById("player-deck-img");
-  if (playerDeckImgEl) playerDeckImgEl.src = chosenPlayerBack;
+  const playerDeckTopEl = document.getElementById("player-deck-top-img");
+  applyCardBackLayers(playerDeckImgEl, playerDeckTopEl, chosenPlayerBack);
 
   const playerDeck = shuffle(runState.permanentDeck).map((id) => createCardInstance(id, false));
   const allowedPool = window.CollectionSystem
@@ -2459,7 +2490,11 @@ function render() {
     ? (state.isPlayerTurn ? "ESPERANDO TU JUGADA" : "TURNO DEL RIVAL")
     : `INTENCION: ${state.enemy.intention.label}`;
   document.getElementById("enemy-deck-count").textContent = `${state.enemy.deckCount}`;
-  document.getElementById("enemy-deck-img").src = state.enemy.cardBack;
+  applyCardBackLayers(
+    document.getElementById("enemy-deck-img"),
+    document.getElementById("enemy-deck-top-img"),
+    state.enemy.cardBack
+  );
   const floorLabel = runState.mapNav
     ? `PISO ${Math.max(1, runState.mapNav.currentFloor)} / ${runState.mapNav.map.floorsCount}${runState.currentEncounter?.isElite ? " (ELITE)" : runState.currentEncounter?.isBoss ? " (JEFE)" : ""}`
     : `COMBATE ${runState.stageIndex + 1} / ${STAGES.length}`;
@@ -2480,7 +2515,7 @@ function render() {
   for (let i = 0; i < state.enemy.handCount; i++) {
     const back = document.createElement("div");
     back.className = "enemy-card-back";
-    back.innerHTML = `<img src="${state.enemy.cardBack}" alt="Carta Rival" />`;
+    back.innerHTML = renderCardBack2LayerMarkup(state.enemy.cardBack, "Carta Rival");
     enemyHandEl.appendChild(back);
   }
 
@@ -3930,13 +3965,9 @@ function renderCollectionScreen() {
       const card = document.createElement("div");
       card.className = `collection-back-item ${unlocked ? "unlocked" : "locked"}`;
       const src = b.src || "assets/card_backs/back_forja.png";
-      const topSrc = getCardBackTopSrc(src);
       card.innerHTML = `
         <div class="back-pedestal">
-          <div class="collection-back-preview card-back-2layer">
-            <img class="card-back-base" src="${src}" alt="${b.label}" />
-            <img class="card-back-top" src="${topSrc}" alt="" onerror="this.style.display='none'" />
-          </div>
+          ${renderCardBack2LayerMarkup(src, b.label, "collection-back-preview")}
         </div>
         <div class="collection-back-ribbon">${b.label.toUpperCase()}</div>
         <div class="${unlocked ? "info-plaque plaque-unlocked" : "info-plaque plaque-locked"}">

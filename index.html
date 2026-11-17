@@ -96,7 +96,10 @@
         <div class="enemy-hand-zone">
           <div class="enemy-hand" id="enemy-hand"></div>
           <div class="enemy-deck-pile" title="Mazo Rival">
-            <img id="enemy-deck-img" src="assets/ui/card_back_enemy.png" alt="Mazo Rival" />
+            <div class="card-back-2layer">
+              <img id="enemy-deck-img" class="card-back-base" src="assets/ui/card_back_enemy.png" alt="Mazo Rival" />
+              <img id="enemy-deck-top-img" class="card-back-top" src="" alt="" style="display:none" />
+            </div>
             <span class="pile-count-badge" id="enemy-deck-count">10</span>
           </div>
         </div>
@@ -195,7 +198,10 @@
         <div class="hand-stage">
           <!-- Physical Deck Pile -->
           <div class="table-pile deck-pile" id="player-deck-pile" title="Tu Mazo">
-            <img id="player-deck-img" src="assets/card_backs/back_forja.png" alt="Mazo" />
+            <div class="card-back-2layer">
+              <img id="player-deck-img" class="card-back-base" src="assets/card_backs/back_forja.png" alt="Mazo" />
+              <img id="player-deck-top-img" class="card-back-top" src="assets/card_backs/back_forja_top.png" alt="" />
+            </div>
             <span class="pile-count-badge" id="deck-count">10</span>
             <span class="pile-label">MAZO</span>
           </div>

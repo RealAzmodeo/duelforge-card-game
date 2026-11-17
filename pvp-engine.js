@@ -357,10 +357,17 @@
     const playerAvatar = document.querySelector("#player-avatar-btn img:first-child");
     const playerFrame = document.getElementById("player-frame-img");
     const enemyFrame = document.getElementById("enemy-frame-img");
-    const playerDeckImg = document.querySelector("#player-deck-pile img");
+    const playerDeckImg = document.getElementById("player-deck-img");
+    const playerDeckTopImg = document.getElementById("player-deck-top-img");
     if (playerAvatar && view.player?.avatar) playerAvatar.src = view.player.avatar;
     if (playerFrame && view.player?.frame) playerFrame.src = view.player.frame;
-    if (playerDeckImg && view.player?.cardBack) playerDeckImg.src = view.player.cardBack;
+    if (playerDeckImg && view.player?.cardBack) {
+      if (typeof applyCardBackLayers === "function") {
+        applyCardBackLayers(playerDeckImg, playerDeckTopImg, view.player.cardBack);
+      } else {
+        playerDeckImg.src = view.player.cardBack;
+      }
+    }
     if (enemyFrame && view.enemy?.frame) enemyFrame.src = view.enemy.frame;
 
     if (view.pendingReactionForMe) {

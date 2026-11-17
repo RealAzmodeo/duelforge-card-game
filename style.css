@@ -666,6 +666,8 @@ body {
   position: absolute;
   top: -10px;
   right: -10px;
+  z-index: 6;
+  transform: translateZ(30px);
   background: url("assets/ui/counter_seal.png") center/contain no-repeat;
   color: #ffffff;
   border: none;
@@ -686,6 +688,7 @@ body {
 .pile-label {
   position: absolute;
   bottom: -16px;
+  z-index: 6;
   font-family: var(--font-display);
   font-size: 10px;
   color: #cbd5e1;
@@ -1455,9 +1458,28 @@ body {
   transition: transform 0.12s ease;
 }
 
-.deck-pile .card-back-2layer {
+.deck-pile .card-back-2layer,
+.enemy-deck-pile .card-back-2layer,
+.enemy-card-back .card-back-2layer {
   width: 100%;
   height: 100%;
+  transform: none;
+}
+
+.deck-pile .card-back-2layer .card-back-base,
+.enemy-deck-pile .card-back-2layer .card-back-base,
+.enemy-card-back .card-back-2layer .card-back-base {
+  object-fit: contain;
+  box-shadow: none;
+}
+
+.deck-pile .card-back-2layer .card-back-top,
+.enemy-deck-pile .card-back-2layer .card-back-top,
+.enemy-card-back .card-back-2layer .card-back-top {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  transform: translateZ(2px);
 }
 
 .collection-back-preview.card-back-2layer {
