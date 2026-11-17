@@ -223,7 +223,7 @@
       return {
         name: "SENOR TITAN",
         hp: 86,
-        avatar: "assets/heroes/enemy_boss.png",
+        avatar: "assets/heroes/enemy_senor_titan.png",
         frame: "assets/ui/portrait_frame_obsidian.png",
         arenaBg: "assets/ui/arena_bg_3.png",
         cardBack: "assets/ui/card_back_enemy_3.png",
@@ -243,7 +243,7 @@
       return {
         name: tier2 ? "GUARDIAN OBSIDIANA" : "COMANDANTE CRISTAL",
         hp: 56 + floor * 3,
-        avatar: tier2 ? "assets/heroes/enemy_boss.png" : "assets/heroes/enemy_2.png",
+        avatar: tier2 ? "assets/heroes/enemy_guardian_obsidiana.png" : "assets/heroes/enemy_comandante_cristal.png",
         frame: tier2 ? "assets/ui/portrait_frame_obsidian.png" : "assets/ui/portrait_frame_crystal.png",
         arenaBg: tier2 ? "assets/ui/arena_bg_3.png" : "assets/ui/arena_bg_2.png",
         cardBack: tier2 ? "assets/ui/card_back_enemy_3.png" : "assets/ui/card_back_enemy_2.png",
@@ -263,7 +263,7 @@
       return {
         name: "CAPITAN HIERRO",
         hp: 40 + floor * 4,
-        avatar: "assets/heroes/enemy_hero.png",
+        avatar: "assets/heroes/enemy_capitan_hierro.png",
         frame: "assets/ui/portrait_frame_iron.png",
         arenaBg: "assets/ui/arena_bg.png",
         cardBack: "assets/ui/card_back_enemy.png",
@@ -282,7 +282,7 @@
       return {
         name: "MAGA DE CRISTALES",
         hp: 48 + floor * 2,
-        avatar: "assets/heroes/enemy_2.png",
+        avatar: "assets/heroes/enemy_maga_cristales.png",
         frame: "assets/ui/portrait_frame_crystal.png",
         arenaBg: "assets/ui/arena_bg_2.png",
         cardBack: "assets/ui/card_back_enemy_2.png",
@@ -300,7 +300,7 @@
     return {
       name: "CAMPEON DE FORJA",
       hp: 58 + (floor - 6) * 4,
-      avatar: "assets/heroes/enemy_2.png",
+      avatar: "assets/heroes/enemy_campeon_forja.png",
       frame: "assets/ui/portrait_frame_obsidian.png",
       arenaBg: "assets/ui/arena_bg_3.png",
       cardBack: "assets/ui/card_back_enemy_3.png",

@@ -852,17 +852,6 @@
       const heroArt = `assets/heroes/hero_${deck.id}_${h.id}.png`;
 
       const counts = {};
-      deck.cards.forEach((cid) => {
-        counts[cid] = (counts[cid] || 0) + 1;
-      });
-      const hoverRows = Object.entries(counts)
-        .map(([cid, qty]) => {
-          const c = CARD_CATALOG[cid];
-          if (!c) return "";
-          return `<div class="deck-hover-card-row"><img src="${c.art}" alt="" /><span>${c.name}</span><b>x${qty}</b></div>`;
-        })
-        .join("");
-
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.faction = deck.id;
@@ -877,14 +866,11 @@
         <div class="deck-pillar-bottom">
           <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
           <span class="deck-choice-name">${deck.name}</span>
-          <div class="deck-hero-ribbon" style="background-image: url('assets/ui/ribbon_${deck.id}.png')"><span>${h.name}</span></div>
+          <span class="deck-hero-name">${h.name}</span>
           <span class="deck-choice-desc">${h.passive}</span>
         </div>
-        <div class="deck-hover-drawer">
-          <div class="deck-hover-strategy">${f.desc}</div>
-          <div class="deck-hover-cards">${hoverRows}</div>
-        </div>
       `;
+      if (typeof attachCardParallax === "function") attachCardParallax(btn);
       btn.addEventListener("mouseenter", () => renderVsDeckDetail(deck.id));
       btn.addEventListener("mouseleave", () => renderVsDeckDetail(lobby.selectedDeckId));
       btn.addEventListener("click", () => {

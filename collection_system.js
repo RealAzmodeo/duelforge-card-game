@@ -23,12 +23,12 @@
   };
 
   const ENEMY_CODEX = [
-    { name: "CAPITAN HIERRO", tier: "Normal", avatar: "assets/heroes/enemy_hero.png", desc: "Vanguardia inicial de las puertas exteriores." },
-    { name: "MAGA DE CRISTALES", tier: "Normal", avatar: "assets/heroes/enemy_2.png", desc: "Invoca golems cristalinos en pisos medios." },
-    { name: "CAMPEON DE FORJA", tier: "Normal", avatar: "assets/heroes/enemy_2.png", desc: "Duelista veterano de los pisos altos." },
-    { name: "COMANDANTE CRISTAL", tier: "Elite", avatar: "assets/heroes/enemy_2.png", desc: "Elite de gran resistencia y presion constante." },
-    { name: "GUARDIAN OBSIDIANA", tier: "Elite", avatar: "assets/heroes/enemy_boss.png", desc: "Elite blindado de la camara superior." },
-    { name: "SENOR TITAN", tier: "Jefe", avatar: "assets/heroes/enemy_boss.png", desc: "Jefe final del acto. Custodia la victoria." }
+    { name: "CAPITAN HIERRO", tier: "Normal", avatar: "assets/heroes/enemy_capitan_hierro.png", desc: "Vanguardia inicial de las puertas exteriores." },
+    { name: "MAGA DE CRISTALES", tier: "Normal", avatar: "assets/heroes/enemy_maga_cristales.png", desc: "Invoca golems cristalinos en pisos medios." },
+    { name: "CAMPEON DE FORJA", tier: "Normal", avatar: "assets/heroes/enemy_campeon_forja.png", desc: "Duelista veterano de los pisos altos." },
+    { name: "COMANDANTE CRISTAL", tier: "Elite", avatar: "assets/heroes/enemy_comandante_cristal.png", desc: "Elite de gran resistencia y presion constante." },
+    { name: "GUARDIAN OBSIDIANA", tier: "Elite", avatar: "assets/heroes/enemy_guardian_obsidiana.png", desc: "Elite blindado de la camara superior." },
+    { name: "SENOR TITAN", tier: "Jefe", avatar: "assets/heroes/enemy_senor_titan.png", desc: "Jefe final del acto. Custodia la victoria." }
   ];
 
   let memoryStorage = null;

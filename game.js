@@ -748,18 +748,6 @@ function renderDeckSelector() {
     const h = FACTION_HEROES[deck.id];
     const heroArt = `assets/heroes/hero_${deck.id}_${h.id}.png`;
 
-    const counts = {};
-    deck.cards.forEach((cid) => {
-      counts[cid] = (counts[cid] || 0) + 1;
-    });
-    const hoverRows = Object.entries(counts)
-      .map(([cid, qty]) => {
-        const c = CARD_CATALOG[cid];
-        if (!c) return "";
-        return `<div class="deck-hover-card-row"><img src="${c.art}" alt="" /><span>${c.name}</span><b>x${qty}</b></div>`;
-      })
-      .join("");
-
     const btn = document.createElement("button");
     btn.type = "button";
     btn.dataset.faction = deck.id;
@@ -774,14 +762,11 @@ function renderDeckSelector() {
       <div class="deck-pillar-bottom">
         <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
         <span class="deck-choice-name">${deck.name}</span>
-        <div class="deck-hero-ribbon" style="--ribbon-url: url('assets/ui/ribbon_${deck.id}.png')"><span>${h.name}</span></div>
+        <span class="deck-hero-name">${h.name}</span>
         <span class="deck-choice-desc">${h.passive}</span>
       </div>
-      <div class="deck-hover-drawer">
-        <div class="deck-hover-strategy">${f.desc}</div>
-        <div class="deck-hover-cards">${hoverRows}</div>
-      </div>
     `;
+    attachCardParallax(btn);
     btn.addEventListener("mouseenter", () => renderDeckDetailPanel(deck.id));
     btn.addEventListener("mouseleave", () => renderDeckDetailPanel(selectedStarterDeckId));
     btn.addEventListener("click", () => {
@@ -849,7 +834,7 @@ const STAGES = [
   {
     name: "CAPITAN HIERRO",
     hp: 48,
-    avatar: "assets/heroes/enemy_hero.png",
+    avatar: "assets/heroes/enemy_capitan_hierro.png",
     frame: "assets/ui/portrait_frame_iron.png",
     arenaBg: "assets/ui/arena_bg.png",
     cardBack: "assets/ui/card_back_enemy.png",
@@ -862,7 +847,7 @@ const STAGES = [
   {
     name: "MAGA DE CRISTALES",
     hp: 56,
-    avatar: "assets/heroes/enemy_2.png",
+    avatar: "assets/heroes/enemy_maga_cristales.png",
     frame: "assets/ui/portrait_frame_crystal.png",
     arenaBg: "assets/ui/arena_bg_2.png",
     cardBack: "assets/ui/card_back_enemy_2.png",
@@ -875,7 +860,7 @@ const STAGES = [
   {
     name: "SENOR TITAN",
     hp: 68,
-    avatar: "assets/heroes/enemy_boss.png",
+    avatar: "assets/heroes/enemy_senor_titan.png",
     frame: "assets/ui/portrait_frame_obsidian.png",
     arenaBg: "assets/ui/arena_bg_3.png",
     cardBack: "assets/ui/card_back_enemy_3.png",
@@ -2302,6 +2287,14 @@ function setHint(text) {
 }
 
 function render() {
+  const playerAvatarImg = document.querySelector("#player-avatar-btn img");
+  if (playerAvatarImg) {
+    const heroInfo = FACTION_HEROES[runState.faction];
+    if (heroInfo) {
+      playerAvatarImg.src = `assets/heroes/hero_${runState.faction}_${heroInfo.id}.png`;
+      playerAvatarImg.alt = heroInfo.name;
+    }
+  }
   document.getElementById("enemy-name").textContent = state.enemy.name;
   document.getElementById("enemy-avatar-img").src = state.enemy.avatar;
   document.getElementById("enemy-hp").textContent = `${state.enemy.hp}/${state.enemy.maxHp}`;
