@@ -144,6 +144,8 @@
         spawnFx(ev.selector, ev.text, ev.cls);
       } else if (ev.kind === "vfx") {
         spawnVfxShape(ev.selector, ev.cls);
+      } else if (ev.kind === "vfx_destroy") {
+        window.VFX?.playUnitDestroy(ev.selector, ev.isEnemy);
       } else if (ev.kind === "shake") {
         triggerShake(ev.selector);
       }

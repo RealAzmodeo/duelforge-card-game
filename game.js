@@ -340,7 +340,7 @@ const CARD_CATALOG = {
         const sel = `#enemy-slots .unit-slot:nth-child(${idx + 1})`;
         spawnVfxShape(sel, "vfx-slash");
         spawnFx(sel, "-5", "fx-dmg");
-        if (u.hp <= 0) state.enemy.board[idx] = null;
+        if (u.hp <= 0) triggerUnitDeath("enemy", idx);
       }
       spawnVfxShape("#enemy-hero-panel", "vfx-burst");
       dealDamageToHero("enemy", 6);
@@ -364,7 +364,7 @@ const CARD_CATALOG = {
           const sel = `#enemy-slots .unit-slot:nth-child(${idx + 1})`;
           spawnVfxShape(sel, "vfx-burst");
           spawnFx(sel, "-4", "fx-dmg");
-          if (u.hp <= 0) state.enemy.board[idx] = null;
+          if (u.hp <= 0) triggerUnitDeath("enemy", idx);
         }
       });
     }
@@ -544,7 +544,7 @@ function buildEffectFromData(effects = {}) {
           u.stunned = true;
           spawnFx(sel, "ATURDIDA", "fx-shd");
         }
-        if (u.hp <= 0) state.enemy.board[targetIdx] = null;
+        if (u.hp <= 0) triggerUnitDeath("enemy", targetIdx);
       } else {
         spawnVfxShape("#enemy-hero-panel", "vfx-slash");
         dealDamageToHero("enemy", effects.damageEnemyUnitOrHero);
@@ -568,7 +568,7 @@ function buildEffectFromData(effects = {}) {
           u.stunned = true;
           spawnFx(sel, "ATURDIDA", "fx-shd");
         }
-        if (u.hp <= 0) state.enemy.board[idx] = null;
+        if (u.hp <= 0) triggerUnitDeath("enemy", idx);
       });
       spawnVfxShape("#enemy-hero-panel", "vfx-slash");
       dealDamageToHero("enemy", dmg);
@@ -1198,23 +1198,26 @@ function dealDamageToHero(target, amount) {
   if (remaining > 0) {
     spawnFx(selector, `-${remaining} HP`, "fx-dmg");
     window.SFX?.play("attack_hit");
+    window.VFX?.playHeroHit(selector, remaining, false);
   } else {
     spawnFx(selector, "BLOQUEADO", "fx-shd");
     window.SFX?.play("shield_block");
+    window.VFX?.playHeroHit(selector, 0, true);
   }
   checkGameOver();
 }
 
 function clearCombatFinisherEffects() {
-  document.querySelector(".main-stage")?.classList.remove("finisher-victory", "finisher-defeat");
+  document.querySelector(".main-stage")?.classList.remove("finisher-victory", "finisher-boss", "finisher-defeat");
   document.getElementById("enemy-hero-panel")?.classList.remove("enemy-shatter");
   document.querySelector(".enemy-side")?.classList.remove("enemy-shatter");
   document.getElementById("player-hero-panel")?.classList.remove("player-shatter");
   document.querySelector(".player-side")?.classList.remove("player-shatter");
   document.getElementById("finisher-banner")?.classList.add("hidden");
+  document.getElementById("finisher-banner")?.classList.remove("is-boss");
 }
 
-function playCombatFinisher(isVictory, headline, subline, onComplete) {
+function playCombatFinisher(isVictory, headline, subline, onComplete, isBoss = false) {
   stopTurnTimer();
   render();
   clearCombatFinisherEffects();
@@ -1224,14 +1227,19 @@ function playCombatFinisher(isVictory, headline, subline, onComplete) {
   const titleEl = document.getElementById("finisher-title");
   const subEl = document.getElementById("finisher-sub");
 
-  stageEl?.classList.add(isVictory ? "finisher-victory" : "finisher-defeat");
+  stageEl?.classList.add(isVictory ? (isBoss ? "finisher-boss" : "finisher-victory") : "finisher-defeat");
   triggerShake(".main-stage");
-  window.SFX?.play(isVictory ? "victory_chime" : "defeat_tone");
+  if (!isVictory) {
+    window.SFX?.play("defeat_tone");
+  } else if (!isBoss) {
+    window.SFX?.play("victory_chime");
+  }
+  window.VFX?.playFinisherSequence(isVictory ? (isBoss ? "boss_victory" : "victory") : "defeat");
 
   if (isVictory) {
     document.getElementById("enemy-hero-panel")?.classList.add("enemy-shatter");
     document.querySelector(".enemy-side")?.classList.add("enemy-shatter");
-    spawnFx("#enemy-hero-panel", "DESTRUIDO!", "fx-dmg");
+    spawnFx("#enemy-hero-panel", isBoss ? "JEFE ANIQUILADO!" : "DESTRUIDO!", "fx-dmg");
   } else {
     document.getElementById("player-hero-panel")?.classList.add("player-shatter");
     document.querySelector(".player-side")?.classList.add("player-shatter");
@@ -1241,15 +1249,17 @@ function playCombatFinisher(isVictory, headline, subline, onComplete) {
   if (banner && titleEl && subEl) {
     banner.classList.toggle("is-victory", isVictory);
     banner.classList.toggle("is-defeat", !isVictory);
+    banner.classList.toggle("is-boss", Boolean(isVictory && isBoss));
     titleEl.textContent = headline;
     subEl.textContent = subline || "";
     banner.classList.remove("hidden");
   }
 
+  const durationMs = isVictory && isBoss ? 2250 : 1650;
   setTimeout(() => {
     clearCombatFinisherEffects();
     if (typeof onComplete === "function") onComplete();
-  }, 1650);
+  }, durationMs);
 }
 
 function checkGameOver() {
@@ -1286,7 +1296,7 @@ function checkGameOver() {
       } else {
         openBoosterModal(false);
       }
-    });
+    }, isBossWin);
   } else if (state.player.hp <= 0) {
     state.gameOver = true;
     runState.inCombat = false;
@@ -1300,6 +1310,9 @@ function checkGameOver() {
 function showModal(title, subtitle, isVictory = true) {
   stopTurnTimer();
   window.SFX?.play(isVictory ? "victory_chime" : "defeat_tone");
+  if (isVictory) {
+    window.VFX?.celebrate("victory");
+  }
   const banner = document.getElementById("gameover-banner-img");
   if (banner) {
     banner.src = isVictory ? "assets/ui/banner_victory.png" : "assets/ui/banner_defeat.png";
@@ -1565,14 +1578,31 @@ function revealBoosterCards(tier, isInitial = false, tierKey = "basico") {
       </div>
       ${complexNote ? `<div class="card-complex-note">${complexNote}</div>` : ""}
     `;
-    attachCardParallax(wrap.querySelector(".hand-card"));
-    wrap.addEventListener("click", () => pickBoosterCard(id, isInitial));
+    const cardEl = wrap.querySelector(".hand-card");
+    attachCardParallax(cardEl);
+    wrap.addEventListener("click", (ev) => pickBoosterCard(id, isInitial, ev.currentTarget));
     choicesEl.appendChild(wrap);
+    if (card.rarity === "epica" || card.rarity === "legendaria" || card.rarity === "rara") {
+      setTimeout(() => {
+        if (!document.getElementById("booster-modal")?.classList.contains("hidden")) {
+          window.VFX?.playRarityReveal(cardEl, card.rarity);
+        }
+      }, idx * 140 + 200);
+    }
   });
   window.FTUE?.onBoosterRevealed(isInitial);
 }
 
-function pickBoosterCard(cardId, isInitial = false) {
+function pickBoosterCard(cardId, isInitial = false, sourceEl = null) {
+  const card = CARD_CATALOG[cardId];
+  const rarity = card?.rarity || "comun";
+  if (rarity === "legendaria") {
+    window.VFX?.burstAt(sourceEl || "#booster-choices", "legendary", { count: 32, ringRadius: 150 });
+  } else if (rarity === "epica") {
+    window.VFX?.burstAt(sourceEl || "#booster-choices", "epic", { count: 24, ringRadius: 120 });
+  } else {
+    window.VFX?.burstAt(sourceEl || "#booster-choices", "gold", { count: 16, ringRadius: 90 });
+  }
   window.SFX?.play("heal_buff");
   window.CollectionSystem?.unlockCard(cardId);
   runState.permanentDeck.push(cardId);
@@ -1614,7 +1644,9 @@ function applyEquipToUnit(slotIndex, card, handIndex) {
     state.player.discard.push(card);
   }
   state.pendingEquip = null;
-  spawnFx(`#player-slots .unit-slot:nth-child(${slotIndex + 1})`, `+${st.atk || 0}/+${st.hp || 0}`, "fx-heal");
+  const targetSlotSel = `#player-slots .unit-slot:nth-child(${slotIndex + 1})`;
+  spawnFx(targetSlotSel, `+${st.atk || 0}/+${st.hp || 0}`, "fx-heal");
+  window.VFX?.playCardPlay(card, null, targetSlotSel);
   setHint(`Equipaste ${card.name} en ${unit.name}.`);
   render();
 }
@@ -1633,6 +1665,8 @@ function playCard(handIndex) {
 
   const inReaction = Boolean(state.reactionWindow);
   if (!state.isPlayerTurn && !(inReaction && card.reaction)) return;
+  const handCardEl = document.querySelectorAll("#player-hand .hand-card")[handIndex] || null;
+  let vfxTargetSelector = null;
 
   if (card.type === "Unidad") {
     const emptySlot = state.player.board.findIndex((u) => u === null);
@@ -1642,6 +1676,7 @@ function playCard(handIndex) {
       return;
     }
     window.SFX?.play("play_card");
+    vfxTargetSelector = `#player-slots .unit-slot:nth-child(${emptySlot + 1})`;
     state.player.energy -= card.cost;
     state.player.hand.splice(handIndex, 1);
     const legionBonus = (runState.faction === "legion" && card.haste) ? 1 : 0;
@@ -1669,6 +1704,7 @@ function playCard(handIndex) {
       return;
     }
     window.SFX?.play("heal_buff");
+    vfxTargetSelector = "#player-relics";
     state.player.energy -= card.cost;
     state.player.hand.splice(handIndex, 1);
     state.player.relics[emptyRelic] = {
@@ -1702,6 +1738,7 @@ function playCard(handIndex) {
     return;
   } else {
     window.SFX?.play("play_card");
+    vfxTargetSelector = card.vfxType === "burn" ? "#enemy-hero-panel" : "#player-hero-panel";
     animateCardDissolve(handIndex, card.vfxType || "beam");
     state.player.energy -= card.cost;
     state.player.hand.splice(handIndex, 1);
@@ -1711,6 +1748,8 @@ function playCard(handIndex) {
       state.player.discard.push(card);
     }
   }
+
+  window.VFX?.playCardPlay(card, handCardEl, vfxTargetSelector);
 
   state.selectedUnitIndex = null;
   state.pendingEquip = null;
@@ -1850,6 +1889,12 @@ function triggerUnitDeath(side, slotIndex) {
   const unit = state[side]?.board?.[slotIndex];
   if (!unit) return;
   const onDeath = unit.onDeath;
+  const slotSel = `#${side === "enemy" ? "enemy" : "player"}-slots .unit-slot:nth-child(${slotIndex + 1})`;
+  if (state && Array.isArray(state._pvpFxQueue)) {
+    state._pvpFxQueue.push({ kind: "vfx_destroy", selector: slotSel, isEnemy: side === "enemy" });
+  } else {
+    window.VFX?.playUnitDestroy(slotSel, side === "enemy");
+  }
   state[side].board[slotIndex] = null;
   if (side === "player" && runState.faction === "culto") {
     const healed = Math.min(2, state.player.maxHp - state.player.hp);
@@ -1921,7 +1966,7 @@ function attackEnemyUnit(enemySlotIndex) {
       spawnFx("#enemy-hero-panel", `PERFORA -${excess}`, "fx-dmg");
     }
 
-    if (defender.hp <= 0) state.enemy.board[enemySlotIndex] = null;
+    if (defender.hp <= 0) triggerUnitDeath("enemy", enemySlotIndex);
     if (attacker.hp <= 0) triggerUnitDeath("player", attackerIdx);
 
     setHint("Combate resuelto.");
@@ -2167,7 +2212,9 @@ function executeEnemyTurn() {
       }
     });
 
-    state.enemy.board = state.enemy.board.map((u) => (u && u.hp > 0 ? u : null));
+    state.enemy.board.forEach((u, idx) => {
+      if (u && u.hp <= 0) triggerUnitDeath("enemy", idx);
+    });
 
     // Resolve enemy hero direct attack
     if (intent.type === "attack" && !state.gameOver) {
@@ -2559,6 +2606,9 @@ function updateTimerUI() {
   fill.style.width = `${pct}%`;
   text.textContent = `${Math.ceil(turnTimeLeft)}s`;
   box.classList.toggle("urgent", turnTimeLeft <= 10);
+  box.classList.toggle("critical", turnTimeLeft <= 5 && turnTimeLeft > 0);
+  const active = Boolean(turnTimerHandle) && !window.FTUE?.isBlockingTimer() && Boolean(state?.isPlayerTurn) && !state?.gameOver;
+  window.VFX?.setTimerUrgency(turnTimeLeft, active);
 }
 
 function stopTurnTimer() {
@@ -2566,6 +2616,9 @@ function stopTurnTimer() {
     clearInterval(turnTimerHandle);
     turnTimerHandle = null;
   }
+  const box = document.getElementById("turn-timer-box");
+  box?.classList.remove("urgent", "critical");
+  window.VFX?.setTimerUrgency(TURN_DURATION, false);
 }
 
 function startTurnTimer() {
@@ -3451,6 +3504,11 @@ function openShopModal() {
       buyBtn.textContent = "COMPRADO";
       buyBtn.disabled = true;
       window.SFX?.play("gold_coin");
+      if (card.rarity === "epica" || card.rarity === "legendaria") {
+        window.VFX?.playRarityReveal(cardEl, card.rarity);
+      } else {
+        window.VFX?.burstAt(cardEl, "gold", { count: 14, ringRadius: 85 });
+      }
       refreshShopUI();
     };
 
@@ -3471,12 +3529,16 @@ function openShopModal() {
 
 function openEventModal() {
   const modal = document.getElementById("event-modal");
+  const modalCard = modal?.querySelector(".event-modal-card");
   const titleEl = document.getElementById("event-title");
   const descEl = document.getElementById("event-desc");
   const choicesEl = document.getElementById("event-choices");
   const outcomeEl = document.getElementById("event-outcome");
   const contBtn = document.getElementById("event-continue-btn");
   if (!modal || !window.MapSystem) return;
+
+  modalCard?.classList.remove("event-fx-positive", "event-fx-negative", "event-fx-epic");
+  outcomeEl.classList.remove("outcome-positive", "outcome-negative", "outcome-epic");
 
   const events = window.MapSystem.MAP_EVENTS.filter((e) => e.id !== runState.lastEventId);
   const ev = events[Math.floor(Math.random() * events.length)] || window.MapSystem.MAP_EVENTS[0];
@@ -3491,11 +3553,13 @@ function openEventModal() {
   contBtn.classList.add("hidden");
   choicesEl.innerHTML = "";
 
-  function finishEvent(msg) {
+  function finishEvent(msg, outcomeKind = "positive") {
     choicesEl.querySelectorAll("button").forEach((b) => { b.disabled = true; });
     outcomeEl.textContent = msg;
-    outcomeEl.classList.remove("hidden");
+    outcomeEl.classList.remove("hidden", "outcome-positive", "outcome-negative", "outcome-epic");
+    outcomeEl.classList.add(`outcome-${outcomeKind}`);
     contBtn.classList.remove("hidden");
+    window.VFX?.playEventOutcome(outcomeKind, ".event-modal-card");
   }
 
   ev.choices.forEach((ch) => {
@@ -3508,10 +3572,12 @@ function openEventModal() {
     }
     btn.onclick = () => {
       let msg = "Listo.";
+      let outcomeKind = "positive";
       if (ch.type === "blood_gold") {
         runState.playerHp = Math.max(1, runState.playerHp + ch.hpDelta);
         runState.runGold = (runState.runGold || 0) + ch.goldDelta;
         msg = `Ofrendaste ${Math.abs(ch.hpDelta)} HP y obtuviste +${ch.goldDelta} Oro de Run.`;
+        outcomeKind = "negative";
       } else if (ch.type === "heal") {
         runState.playerHp = Math.min(runState.playerMaxHp, runState.playerHp + ch.hpDelta);
         msg = `Recuperaste +${ch.hpDelta} HP (HP actual: ${runState.playerHp}/${runState.playerMaxHp}).`;
@@ -3537,13 +3603,16 @@ function openEventModal() {
         window.CollectionSystem?.unlockCard(picked);
         runState.permanentDeck.push(picked);
         msg = `Anadiste ${CARD_CATALOG[picked]?.name || picked} a tu mazo permanente.`;
+        outcomeKind = ch.hpDelta < 0 ? "negative" : "positive";
       } else if (ch.type === "gamble_chest") {
         if (Math.random() < 0.7) {
           runState.runGold = (runState.runGold || 0) + 50;
           msg = "Abriste el cofre sin activar la trampa: +50 Oro de Run.";
+          outcomeKind = "positive";
         } else {
           runState.playerHp = Math.max(1, runState.playerHp - 7);
           msg = "La trampa se activo: perdiste 7 HP.";
+          outcomeKind = "negative";
         }
       } else if (ch.type === "free_card") {
         const pool = MARKET_POOL_IDS.filter((id) => ["comun", "rara"].includes(CARD_CATALOG[id]?.rarity));
@@ -3558,9 +3627,9 @@ function openEventModal() {
         window.CollectionSystem?.unlockCard(picked);
         runState.permanentDeck.push(picked);
         msg = `Descifraste y anadiste ${CARD_CATALOG[picked]?.name || picked} a tu mazo.`;
+        outcomeKind = "epic";
       }
-      window.SFX?.play("heal_buff");
-      finishEvent(msg);
+      finishEvent(msg, outcomeKind);
     };
     choicesEl.appendChild(btn);
   });

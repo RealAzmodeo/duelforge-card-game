@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VFX Lab - Laboratorio de Juice y Dopamina | Duelforge</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23ff3b5c'/><text x='16' y='22' font-size='18' font-weight='900' text-anchor='middle' fill='%23ffd23f' font-family='sans-serif'>D</text></svg>" />
+  <link rel="stylesheet" href="style.css?v=pvp4" />
+  <style>
+    :root {
+      --lab-bg: #090d16;
+      --lab-panel: #111827;
+      --lab-panel-alt: #161f30;
+      --lab-border: #283548;
+      --lab-text: #e2e8f0;
+      --lab-muted: #94a3b8;
+      --lab-blue: #3b82f6;
+      --lab-emerald: #10b981;
+      --lab-amber: #f59e0b;
+      --lab-crimson: #ef4444;
+      --lab-violet: #a855f7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--lab-bg);
+      color: var(--lab-text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .lab-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: var(--lab-panel);
+      border-bottom: 1px solid var(--lab-border);
+    }
+
+    .lab-header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .lab-header p {
+      font-size: 13px;
+      color: var(--lab-muted);
+      margin-top: 2px;
+    }
+
+    .lab-header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .lab-btn {
+      appearance: none;
+      border: 1px solid var(--lab-border);
+      background: var(--lab-panel-alt);
+      color: var(--lab-text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .lab-btn:hover {
+      border-color: var(--lab-blue);
+      transform: translateY(-1px);
+    }
+
+    .lab-btn:active {
+      transform: translateY(1px);
+    }
+
+    .lab-btn.primary { border-color: rgba(59, 130, 246, 0.6); background: rgba(37, 99, 235, 0.2); }
+    .lab-btn.gold { border-color: rgba(245, 158, 11, 0.65); background: rgba(245, 158, 11, 0.16); color: #fde68a; }
+    .lab-btn.violet { border-color: rgba(168, 85, 247, 0.65); background: rgba(168, 85, 247, 0.16); color: #e9d5ff; }
+    .lab-btn.emerald { border-color: rgba(16, 185, 129, 0.65); background: rgba(16, 185, 129, 0.16); color: #a7f3d0; }
+    .lab-btn.crimson { border-color: rgba(239, 68, 68, 0.65); background: rgba(239, 68, 68, 0.16); color: #fecaca; }
+
+    .lab-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      padding: 20px 24px;
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 960px) {
+      .lab-grid { grid-template-columns: 1fr; }
+    }
+
+    .lab-controls {
+      background: var(--lab-panel);
+      border: 1px solid var(--lab-border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .control-group h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: var(--lab-muted);
+      margin-bottom: 8px;
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .lab-stage {
+      background: radial-gradient(circle at 50% 35%, #162138 0%, #090d16 75%);
+      border: 1px solid var(--lab-border);
+      border-radius: 14px;
+      padding: 24px;
+      min-height: 560px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stage-row {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .mock-box {
+      background: rgba(17, 24, 39, 0.88);
+      border: 2px solid var(--lab-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      min-width: 190px;
+      text-align: center;
+      position: relative;
+    }
+
+    .mock-box h3 {
+      font-size: 13px;
+      letter-spacing: 0.8px;
+      color: #f8fafc;
+      margin-bottom: 4px;
+    }
+
+    .mock-box p {
+      font-size: 12px;
+      color: var(--lab-muted);
+    }
+
+    .mock-card-stage {
+      display: flex;
+      gap: 22px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .lab-log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      color: var(--lab-muted);
+      background: #060911;
+      border: 1px solid var(--lab-border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+  </style>
+</head>
+<body>
+  <header class="lab-header">
+    <div>
+      <h1>VFX LAB - LABORATORIO DE JUICE Y DOPAMINA</h1>
+      <p>Prueba en vivo cada efecto visual y sonoro antes de entrar en partida.</p>
+    </div>
+    <div class="lab-header-actions">
+      <button id="lab-mute-btn" class="lab-btn" type="button">SFX: ON</button>
+      <a href="index.html" class="lab-btn primary" style="text-decoration:none;">ABRIR JUEGO</a>
+    </div>
+  </header>
+
+  <main class="lab-grid">
+    <aside class="lab-controls">
+      <div class="control-group">
+        <h2>1. Cartas Epicas y Legendarias (Sobre / Tienda)</h2>
+        <div class="control-row">
+          <button class="lab-btn violet" type="button" data-action="reveal-epic">Revelar Epica</button>
+          <button class="lab-btn gold" type="button" data-action="reveal-legendary">Revelar Legendaria</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>2. Jugar Carta en Combate</h2>
+        <div class="control-row">
+          <button class="lab-btn violet" type="button" data-action="play-epic">Jugar Epica</button>
+          <button class="lab-btn gold" type="button" data-action="play-legendary">Jugar Legendaria</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>3. Destruccion de Unidad y Enemigo</h2>
+        <div class="control-row">
+          <button class="lab-btn crimson" type="button" data-action="destroy-unit">Destruir Unidad</button>
+          <button class="lab-btn gold" type="button" data-action="finisher-victory">Destruir Enemigo</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>4. Jefe Final y Derrota</h2>
+        <div class="control-row">
+          <button class="lab-btn gold" type="button" data-action="finisher-boss">Vencer Jefe Final</button>
+          <button class="lab-btn crimson" type="button" data-action="finisher-defeat">Derrota</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>5. Eventos Misteriosos</h2>
+        <div class="control-row">
+          <button class="lab-btn emerald" type="button" data-action="event-positive">Evento Positivo</button>
+          <button class="lab-btn crimson" type="button" data-action="event-negative">Evento Negativo</button>
+          <button class="lab-btn violet" type="button" data-action="event-epic">Evento Epico</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>6. Aviso Fin de Turno</h2>
+        <div class="control-row">
+          <button class="lab-btn gold" type="button" data-action="timer-warn">Aviso 8s (Ambar)</button>
+          <button class="lab-btn crimson" type="button" data-action="timer-critical">Critico 5s..0s</button>
+          <button class="lab-btn" type="button" data-action="timer-clear">Limpiar Reloj</button>
+        </div>
+      </div>
+
+      <div id="lab-status" class="lab-log">Listo. Haz clic en cualquier boton para probar VFX + SFX.</div>
+    </aside>
+
+    <section class="lab-stage main-stage">
+      <div class="stage-row">
+        <div id="enemy-hero-panel" class="mock-box">
+          <h3>HEROE / JEFE RIVAL</h3>
+          <p>Objetivo de ataques y finishers</p>
+        </div>
+        <div id="enemy-slots" class="mock-box">
+          <div class="unit-slot" style="width:120px;height:80px;margin:0 auto;">
+            <span style="font-size:12px;color:#e2e8f0;">UNIDAD RIVAL</span>
+          </div>
+        </div>
+        <div id="turn-timer-box" class="turn-timer-box">
+          <div class="turn-timer-track"><div id="turn-timer-fill" class="turn-timer-fill"></div></div>
+          <span id="turn-timer-text" class="turn-timer-text">35s</span>
+        </div>
+      </div>
+
+      <div class="stage-row">
+        <div class="mock-card-stage">
+          <div id="lab-card-epic" class="hand-card type-Hechizo faction-arcano rarity-epica" style="position:relative;">
+            <div class="card-banner card-banner-cost-only"><span class="energy-cost"><span>2</span></span></div>
+            <div class="card-art-wrap"><img src="assets/cards/arcano_tormenta.png" alt="Tormenta" /></div>
+            <div class="card-name-ribbon ribbon-epica"><span>CARTA EPICA</span></div>
+          </div>
+
+          <div id="lab-card-legendary" class="hand-card type-Unidad faction-forja rarity-legendaria" style="position:relative;">
+            <div class="card-banner card-banner-cost-only"><span class="energy-cost"><span>3</span></span></div>
+            <div class="card-art-wrap"><img src="assets/cards/forja_coloso.png" alt="Coloso" /></div>
+            <div class="card-name-ribbon ribbon-legendaria"><span>CARTA LEGENDARIA</span></div>
+          </div>
+
+          <div id="lab-event-card" class="mock-box event-modal-card" style="min-width:230px;">
+            <h3>EVENTO MISTERIOSO</h3>
+            <p id="lab-event-outcome" class="event-outcome" style="margin-top:8px;">Esperando eleccion...</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage-row">
+        <div id="player-hero-panel" class="mock-box">
+          <h3>TU HEROE</h3>
+          <p>Panel del jugador</p>
+        </div>
+        <button id="end-turn-btn" class="btn-game" type="button">FIN DE TURNO</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="fx-layer"></div>
+  <div id="vfx-timer-vignette" class="vfx-timer-vignette" aria-hidden="true"></div>
+  <canvas id="vfx-canvas" class="vfx-canvas" aria-hidden="true"></canvas>
+
+  <script src="sfx-presets.js"></script>
+  <script src="sfx-engine.js"></script>
+  <script src="vfx-engine.js?v=1"></script>
+  <script>
+    (function () {
+      const statusEl = document.getElementById("lab-status");
+      const muteBtn = document.getElementById("lab-mute-btn");
+      let countdownTimer = null;
+
+      function updateMuteLabel() {
+        muteBtn.textContent = window.SFX?.isMuted() ? "SFX: OFF" : "SFX: ON";
+      }
+      updateMuteLabel();
+      muteBtn.addEventListener("click", () => {
+        window.SFX?.toggleMute();
+        updateMuteLabel();
+      });
+
+      function stopDemoCountdown() {
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+        window.VFX?.setTimerUrgency(35, false);
+        const box = document.getElementById("turn-timer-box");
+        box?.classList.remove("urgent", "critical");
+        document.getElementById("turn-timer-text").textContent = "35s";
+        document.getElementById("turn-timer-fill").style.width = "100%";
+      }
+
+      document.querySelectorAll("[data-action]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const action = btn.dataset.action;
+          statusEl.textContent = `Ejecutado: ${action}`;
+
+          if (action === "reveal-epic") {
+            const el = document.getElementById("lab-card-epic");
+            el.classList.remove("vfx-reveal-epic");
+            void el.offsetWidth;
+            window.VFX.playRarityReveal(el, "epica");
+          } else if (action === "reveal-legendary") {
+            const el = document.getElementById("lab-card-legendary");
+            el.classList.remove("vfx-reveal-legendary");
+            void el.offsetWidth;
+            window.VFX.playRarityReveal(el, "legendaria");
+          } else if (action === "play-epic") {
+            window.VFX.playCardPlay(
+              { rarity: "epica" },
+              document.getElementById("lab-card-epic"),
+              "#enemy-hero-panel"
+            );
+          } else if (action === "play-legendary") {
+            window.VFX.playCardPlay(
+              { rarity: "legendaria" },
+              document.getElementById("lab-card-legendary"),
+              "#enemy-hero-panel"
+            );
+          } else if (action === "destroy-unit") {
+            window.VFX.playUnitDestroy("#enemy-slots .unit-slot", true);
+          } else if (action === "finisher-victory") {
+            window.SFX?.play("victory_chime");
+            window.VFX.playFinisherSequence("victory");
+          } else if (action === "finisher-boss") {
+            window.VFX.playFinisherSequence("boss_victory");
+          } else if (action === "finisher-defeat") {
+            window.SFX?.play("defeat_tone");
+            window.VFX.playFinisherSequence("defeat");
+          } else if (action === "event-positive") {
+            const out = document.getElementById("lab-event-outcome");
+            out.className = "event-outcome outcome-positive";
+            out.textContent = "+50 Oro de Run y +12 HP recuperados.";
+            window.VFX.playEventOutcome("positive", "#lab-event-card");
+          } else if (action === "event-negative") {
+            const out = document.getElementById("lab-event-outcome");
+            out.className = "event-outcome outcome-negative";
+            out.textContent = "La trampa se activo: perdiste 7 HP.";
+            window.VFX.playEventOutcome("negative", "#lab-event-card");
+          } else if (action === "event-epic") {
+            const out = document.getElementById("lab-event-outcome");
+            out.className = "event-outcome outcome-epic";
+            out.textContent = "Descifraste una carta Epica permanente.";
+            window.VFX.playEventOutcome("epic", "#lab-event-card");
+          } else if (action === "timer-warn") {
+            stopDemoCountdown();
+            const box = document.getElementById("turn-timer-box");
+            box.classList.add("urgent");
+            document.getElementById("turn-timer-text").textContent = "8s";
+            document.getElementById("turn-timer-fill").style.width = "23%";
+            window.VFX.setTimerUrgency(8, true);
+          } else if (action === "timer-critical") {
+            stopDemoCountdown();
+            let left = 5;
+            const tick = () => {
+              const box = document.getElementById("turn-timer-box");
+              box.classList.add("urgent", "critical");
+              document.getElementById("turn-timer-text").textContent = `${left}s`;
+              document.getElementById("turn-timer-fill").style.width = `${(left / 35) * 100}%`;
+              window.VFX.setTimerUrgency(left, true);
+              if (left <= 0) {
+                stopDemoCountdown();
+                statusEl.textContent = "Cuenta regresiva completada.";
+              }
+              left -= 1;
+            };
+            tick();
+            countdownTimer = setInterval(tick, 1000);
+          } else if (action === "timer-clear") {
+            stopDemoCountdown();
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
