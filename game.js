@@ -709,6 +709,10 @@ function getSelectedPlayerCardBack() {
   return found?.src || `assets/card_backs/back_${selectedStarterDeckId}.png`;
 }
 
+function getCardBackTopSrc(baseSrc) {
+  return String(baseSrc || "").replace(/\.png$/i, "_top.png");
+}
+
 function renderCardBackSelector() {
   const container = document.getElementById("card-back-selector");
   if (!container) return;
@@ -723,11 +727,19 @@ function renderCardBackSelector() {
     btn.type = "button";
     btn.className = `card-back-choice ${selectedCardBackId === b.id ? "selected" : ""} ${!isUnlocked ? "locked" : ""}`;
     const previewSrc = b.src || `assets/card_backs/back_${selectedStarterDeckId}.png`;
+    const topSrc = getCardBackTopSrc(previewSrc);
     btn.title = !isUnlocked
       ? `Bloqueado: ${unlockedBacks.getCardBackRequirement(b.id)}`
       : (b.id === "auto" ? "Dorso automatico segun tu faccion" : `Dorso: ${b.label}`);
-    btn.innerHTML = `<img src="${previewSrc}" alt="${b.label}" /><span>${isUnlocked ? b.label : "BLOQ."}</span>`;
+    btn.innerHTML = `
+      <span class="card-back-2layer">
+        <img class="card-back-base" src="${previewSrc}" alt="${b.label}" />
+        <img class="card-back-top" src="${topSrc}" alt="" onerror="this.style.display='none'" />
+      </span>
+      <span>${isUnlocked ? b.label : "BLOQ."}</span>
+    `;
     if (isUnlocked) {
+      attachCardParallax(btn, btn.querySelector(".card-back-2layer"));
       btn.addEventListener("click", () => {
         selectedCardBackId = b.id;
         renderCardBackSelector();
@@ -1390,7 +1402,6 @@ function createVisualCardEl(card, { mini = false, showNote = false } = {}) {
   const { iconsHtml, complexNote } = buildCardStatIcons(card);
   const el = document.createElement("div");
   el.className = `hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"} ${card.ephemeral ? "ephemeral" : ""} ${mini ? "mini-deck-card" : ""}`;
-  el.title = card.desc;
   el.innerHTML = `
     <div class="card-type-crest" title="Tipo: ${card.type}"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
     ${buildCardBadges(card)}
@@ -1401,10 +1412,10 @@ function createVisualCardEl(card, { mini = false, showNote = false } = {}) {
       <img src="${card.art}" alt="${card.name}" />
     </div>
     ${iconsHtml}
-    <div class="card-name-ribbon ribbon-${card.rarity || "comun"}"><span>${card.name}</span></div>
     ${showNote && complexNote ? `<div class="card-complex-note">${complexNote}</div>` : ""}
   `;
   attachCardParallax(el);
+  attachCardHoverInspector(el, card);
   return el;
 }
 
@@ -1486,21 +1497,22 @@ function buildCardBadges(card) {
   return badges.length ? `<div class="card-side-badges">${badges.join("")}</div>` : "";
 }
 
-function attachCardParallax(cardEl) {
+function attachCardParallax(cardEl, targetEl = cardEl) {
+  if (!cardEl || !targetEl) return;
   cardEl.addEventListener("mousemove", (e) => {
     const r = cardEl.getBoundingClientRect();
     const nx = (e.clientX - r.left) / r.width - 0.5;
     const ny = (e.clientY - r.top) / r.height - 0.5;
-    cardEl.style.setProperty("--ry", `${(nx * 20).toFixed(1)}deg`);
-    cardEl.style.setProperty("--rx", `${(-ny * 20).toFixed(1)}deg`);
-    cardEl.style.setProperty("--px", `${(nx * 8).toFixed(1)}px`);
-    cardEl.style.setProperty("--py", `${(ny * 8).toFixed(1)}px`);
+    targetEl.style.setProperty("--ry", `${(nx * 20).toFixed(1)}deg`);
+    targetEl.style.setProperty("--rx", `${(-ny * 20).toFixed(1)}deg`);
+    targetEl.style.setProperty("--px", `${(nx * 8).toFixed(1)}px`);
+    targetEl.style.setProperty("--py", `${(ny * 8).toFixed(1)}px`);
   });
   cardEl.addEventListener("mouseleave", () => {
-    cardEl.style.setProperty("--ry", "0deg");
-    cardEl.style.setProperty("--rx", "0deg");
-    cardEl.style.setProperty("--px", "0px");
-    cardEl.style.setProperty("--py", "0px");
+    targetEl.style.setProperty("--ry", "0deg");
+    targetEl.style.setProperty("--rx", "0deg");
+    targetEl.style.setProperty("--px", "0px");
+    targetEl.style.setProperty("--py", "0px");
   });
 }
 
@@ -2531,7 +2543,6 @@ function render() {
       card.justDrawn = false;
     }
     const { iconsHtml } = buildCardStatIcons(card);
-    el.title = card.desc;
     el.innerHTML = `
       <div class="card-type-crest" title="Tipo: ${card.type}"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
       ${buildCardBadges(card)}
@@ -2542,9 +2553,9 @@ function render() {
         <img src="${card.art}" alt="${card.name}" />
       </div>
       ${iconsHtml}
-      <div class="card-name-ribbon ribbon-${card.rarity || "comun"}"><span>${card.name}</span></div>
     `;
     attachCardParallax(el);
+    attachCardHoverInspector(el, card);
     if (playable) {
       el.addEventListener("click", () => playCard(idx));
     }
@@ -3767,15 +3778,20 @@ function renderCollectionScreen() {
       const card = document.createElement("div");
       card.className = `collection-back-item ${unlocked ? "unlocked" : "locked"}`;
       const src = b.src || "assets/card_backs/back_forja.png";
+      const topSrc = getCardBackTopSrc(src);
       card.innerHTML = `
         <div class="back-pedestal">
-          <img src="${src}" alt="${b.label}" />
+          <div class="collection-back-preview card-back-2layer">
+            <img class="card-back-base" src="${src}" alt="${b.label}" />
+            <img class="card-back-top" src="${topSrc}" alt="" onerror="this.style.display='none'" />
+          </div>
         </div>
         <div class="collection-back-ribbon">${b.label.toUpperCase()}</div>
         <div class="${unlocked ? "info-plaque plaque-unlocked" : "info-plaque plaque-locked"}">
           ${unlocked ? "DESBLOQUEADO" : cs.getCardBackRequirement(b.id)}
         </div>
       `;
+      attachCardParallax(card, card.querySelector(".card-back-2layer"));
       grid.appendChild(card);
     });
     bodyEl.appendChild(grid);
@@ -3948,6 +3964,10 @@ function hideCardInspector() {
 
 function attachCardHoverInspector(slotEl, card) {
   if (!slotEl || !card) return;
+  const innerCard = slotEl.classList?.contains("hand-card") ? null : slotEl.querySelector?.(".hand-card");
+  if (innerCard) {
+    attachCardParallax(slotEl, innerCard);
+  }
   slotEl.addEventListener("mouseenter", (e) => showCardInspector(card, e));
   slotEl.addEventListener("mousemove", (e) => positionCardInspector(e));
   slotEl.addEventListener("mouseleave", hideCardInspector);
