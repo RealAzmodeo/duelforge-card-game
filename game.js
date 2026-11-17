@@ -608,6 +608,7 @@ const FACTIONS = {
   sindicato: { id: "sindicato", name: "Sindicato del Oro", tag: "Economia / Mercado", desc: "Oro extra, descuentos de Mercado y Efimeras." },
   legion: { id: "legion", name: "Legion Ignea", tag: "Aggro / Velocidad", desc: "Prisa, dano directo y ataque explosivo." },
   culto: { id: "culto", name: "Culto Sombrio", tag: "Drenaje / Sacrificio", desc: "Drenaje, Escabullirse y Ultimo Aliento." },
+  pastel: { id: "pastel", name: "Reino Pastel", tag: "Cute / Curacion", desc: "Princesas, unicornios, caramelos y curacion tactica." },
   neutral: { id: "neutral", name: "Neutral", tag: "Compartida", desc: "Disponible para cualquier mazo." }
 };
 
@@ -616,13 +617,16 @@ const FACTION_HEROES = {
   arcano: { id: "lyra", name: "Lyra, Archimaga Astral", hp: 31, frame: "assets/ui/portrait_frame_crystal.png", passive: "Robas +1 carta extra en turno 1" },
   sindicato: { id: "vex", name: "Vex, Baron del Mercado", hp: 30, frame: "assets/ui/portrait_frame_gold.png", passive: "Empiezas cada combate con +2 Oro" },
   legion: { id: "ignis", name: "Ignis, General Carmesi", hp: 29, frame: "assets/ui/portrait_frame_obsidian.png", passive: "Tus unidades con [PRISA] ganan +1 ATK" },
-  culto: { id: "moros", name: "Moros, Profeta Sombrio", hp: 30, frame: "assets/ui/portrait_frame_obsidian.png", passive: "Curas +2 HP cuando muere una unidad tuya" }
+  culto: { id: "moros", name: "Moros, Profeta Sombrio", hp: 30, frame: "assets/ui/portrait_frame_obsidian.png", passive: "Curas +2 HP cuando muere una unidad tuya" },
+  pastel: { id: "chispita", name: "Princesa Chispita", hp: 28, frame: "assets/ui/portrait_frame_crystal.png", passive: "Cada turno tu unidad con menos vida gana +1/+1" }
 };
 
 function formatHeroPassiveHtml(factionId) {
   switch (factionId) {
     case "forja":
       return `<span>+1</span><img class="deck-passive-ic" src="assets/ui/stat_shd.png" alt="SHD" /><span>al inicio de cada turno</span>`;
+    case "pastel":
+      return `<span>Cada turno tu unidad mas debil gana</span><img class="deck-passive-ic" src="assets/ui/stat_hp.png" alt="HP" /><span>+1/+1</span>`;
     case "arcano":
       return `<span>Robas +1</span><img class="deck-passive-ic" src="assets/ui/icon_draw.png" alt="Carta" /><span>extra en turno 1</span>`;
     case "sindicato":
@@ -681,8 +685,34 @@ const STARTER_DECKS = {
     name: "Culto Sombrio",
     archetype: "Drenaje y Sacrificio",
     cards: ["golpe", "golpe", "golpe", "drenaje", "mercenario", "mercenario", "saqueador", "escudo", "escudo", "moneda"]
+  },
+  pastel: {
+    id: "pastel",
+    name: "Reino Pastel",
+    archetype: "Cute y Curacion",
+    secret: true,
+    cards: ["pastel_hada_azucar", "pastel_hada_azucar", "pastel_caballero_caramelo", "pastel_caballero_caramelo", "pastel_unicornio", "escudo", "escudo", "golpe", "golpe", "moneda"]
   }
 };
+
+function isPastelUnlocked() {
+  try {
+    return localStorage.getItem("duelforge_pastel_unlocked") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function unlockPastelFaction(silent = false) {
+  try {
+    localStorage.setItem("duelforge_pastel_unlocked", "1");
+  } catch {}
+  renderDeckSelector();
+  if (!silent) {
+    window.SFX?.play("heal_buff");
+    setHint("Faccion secreta Reino Pastel desbloqueada!");
+  }
+}
 
 let selectedStarterDeckId = "forja";
 let selectedCardBackId = "auto";
@@ -775,34 +805,53 @@ function renderDeckSelector() {
   Object.values(STARTER_DECKS).forEach((deck) => {
     const f = FACTIONS[deck.id];
     const h = FACTION_HEROES[deck.id];
+    const locked = Boolean(deck.secret && !isPastelUnlocked());
     const heroArt = `assets/heroes/hero_${deck.id}_${h.id}.png`;
+    const deckArt = `assets/decks/deck_${deck.id}.png`;
 
     const btn = document.createElement("button");
     btn.type = "button";
     btn.dataset.faction = deck.id;
-    btn.className = `deck-choice-card ${selectedStarterDeckId === deck.id ? "selected" : ""}`;
-    btn.innerHTML = `
-      <img class="deck-hero-bg" src="${heroArt}" alt="${h.name}" />
-      <div class="deck-hero-fade"></div>
-      <div class="deck-pillar-top">
-        <span class="deck-archetype-text">${f.tag}</span>
-        <span class="deck-hp-text"><img class="deck-hp-ic" src="assets/ui/stat_hp.png" alt="" />${h.hp}</span>
-      </div>
-      <div class="deck-pillar-bottom">
-        <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
-        <span class="deck-choice-name">${deck.name}</span>
-        <span class="deck-hero-name">${h.name}</span>
-        <span class="deck-choice-desc">${formatHeroPassiveHtml(deck.id)}</span>
-      </div>
-    `;
-    attachCardParallax(btn);
-    btn.addEventListener("mouseenter", () => renderDeckDetailPanel(deck.id));
-    btn.addEventListener("mouseleave", () => renderDeckDetailPanel(selectedStarterDeckId));
-    btn.addEventListener("click", () => {
-      selectedStarterDeckId = deck.id;
-      renderDeckSelector();
-      renderCardBackSelector();
-    });
+    btn.className = `deck-choice-card ${selectedStarterDeckId === deck.id ? "selected" : ""} ${locked ? "secret-locked" : `faction-card-${deck.id}`}`;
+    if (locked) {
+      btn.innerHTML = `
+        <div class="deck-pillar-top">
+          <span class="deck-archetype-text">Faccion Secreta</span>
+          <span class="deck-hp-text">???</span>
+        </div>
+        <div class="deck-pillar-bottom">
+          <span class="deck-choice-name">???</span>
+          <span class="deck-hero-name">Bloqueada</span>
+          <span class="deck-choice-desc">Gana 1 run (o escribe CUTE)</span>
+        </div>
+      `;
+      btn.addEventListener("click", () => {
+        window.SFX?.play("invalid_action");
+      });
+    } else {
+      btn.innerHTML = `
+        <img class="deck-hero-bg" src="${heroArt}" alt="${h.name}" />
+        <div class="deck-hero-fade"></div>
+        <div class="deck-pillar-top">
+          <span class="deck-archetype-text">${f.tag}</span>
+          <span class="deck-hp-text"><img class="deck-hp-ic" src="assets/ui/stat_hp.png" alt="" />${h.hp}</span>
+        </div>
+        <div class="deck-pillar-bottom">
+          <img class="deck-choice-img" src="${deckArt}" alt="${deck.name}" />
+          <span class="deck-choice-name">${deck.name}</span>
+          <span class="deck-hero-name">${h.name}</span>
+          <span class="deck-choice-desc">${formatHeroPassiveHtml(deck.id)}</span>
+        </div>
+      `;
+      attachCardParallax(btn);
+      btn.addEventListener("mouseenter", () => renderDeckDetailPanel(deck.id));
+      btn.addEventListener("mouseleave", () => renderDeckDetailPanel(selectedStarterDeckId));
+      btn.addEventListener("click", () => {
+        selectedStarterDeckId = deck.id;
+        renderDeckSelector();
+        renderCardBackSelector();
+      });
+    }
     container.appendChild(btn);
   });
   renderDeckDetailPanel(selectedStarterDeckId);
@@ -1311,6 +1360,7 @@ function checkGameOver() {
 
     playCombatFinisher(true, headline, subline, () => {
       if (isBossWin) {
+        unlockPastelFaction(true);
         showModal("CAMPEON DE LA RUN", "Has derrotado a todos los rivales y al Senor Titan.", true);
       } else {
         openBoosterModal(false);
@@ -1513,6 +1563,7 @@ function buildCardBadges(card) {
   if (card.reaction) badges.push('<span class="badge-icon" title="REACCION: Jugable en turno rival"><img src="assets/ui/badge_reaction.png" alt="Reaccion" /></span>');
   if (card.pierce) badges.push('<span class="badge-icon" title="PERFORAR: Dano sobrante al Heroe"><img src="assets/ui/badge_pierce.png" alt="Perforar" /></span>');
   if (card.onDeath) badges.push('<span class="badge-icon" title="ULTIMO ALIENTO: Efecto al morir"><img src="assets/ui/badge_ondeath.png" alt="Al morir" /></span>');
+  if (card.cute) badges.push('<span class="badge-icon" title="CUTE: Puede curar +1 HP a un aliado o Heroe"><img src="assets/ui/badge_cute.png" alt="Cute" /></span>');
   if (card.ephemeral) badges.push('<span class="badge-icon" title="EFIMERA: Desaparece tras el combate"><img src="assets/ui/badge_ephemeral.png" alt="Efimera" /></span>');
   if (card.equipStats) badges.push('<span class="badge-icon" title="EQUIPO: Mejora permanente a una Unidad"><img src="assets/ui/badge_equip.png" alt="Equipo" /></span>');
   if (card.type === "Reliquia") badges.push(`<span class="badge-icon" title="RELIQUIA: Activa ${card.duration || 2} turnos"><img src="assets/ui/badge_relic.png" alt="Reliquia" /></span>`);
@@ -1713,6 +1764,7 @@ function playCard(handIndex) {
       ready: card.haste,
       stealth: Boolean(card.stealth),
       pierce: Boolean(card.pierce),
+      cute: Boolean(card.cute),
       onDeath: card.onDeath || null,
       upkeep: card.upkeep || 0,
       equips: [],
@@ -1997,6 +2049,40 @@ function attackEnemyUnit(enemySlotIndex) {
   });
 }
 
+function healAllyWithCute(targetIdx) {
+  if (state.selectedUnitIndex === null || !state.isPlayerTurn || state.gameOver) return;
+  const healerIdx = state.selectedUnitIndex;
+  const healer = state.player.board[healerIdx];
+  const target = state.player.board[targetIdx];
+  if (!healer || !healer.cute || !target || healerIdx === targetIdx) return;
+
+  state.selectedUnitIndex = null;
+  hideAttackArrow();
+  healer.ready = false;
+  const healed = Math.min(1, target.maxHp - target.hp);
+  target.hp += healed;
+  window.SFX?.play("heal_buff");
+  spawnFx(`#player-slots .unit-slot:nth-child(${targetIdx + 1})`, `+1 HP`, "fx-heal");
+  setHint(`${healer.name} curo +1 HP a ${target.name}.`);
+  render();
+}
+
+function healPlayerHeroWithCute() {
+  if (state.selectedUnitIndex === null || !state.isPlayerTurn || state.gameOver) return;
+  const healer = state.player.board[state.selectedUnitIndex];
+  if (!healer || !healer.cute) return;
+
+  state.selectedUnitIndex = null;
+  hideAttackArrow();
+  healer.ready = false;
+  const healed = Math.min(1, state.player.maxHp - state.player.hp);
+  state.player.hp += healed;
+  window.SFX?.play("heal_buff");
+  spawnFx("#player-hero-panel", `+1 HP`, "fx-heal");
+  setHint(`${healer.name} curo +1 HP a tu Heroe.`);
+  render();
+}
+
 function attackEnemyHero() {
   if (state.selectedUnitIndex === null || !state.isPlayerTurn || state.gameOver) return;
   const attacker = state.player.board[state.selectedUnitIndex];
@@ -2275,6 +2361,22 @@ function finishEnemyTurn() {
   if (runState.faction === "forja") {
     state.player.armor += 1;
     triggerHeroPassiveFx("PASIVA: +1 SHD", "fx-shd");
+  } else if (runState.faction === "pastel") {
+    let weakestIdx = -1;
+    state.player.board.forEach((u, idx) => {
+      if (!u) return;
+      if (weakestIdx === -1 || u.hp < state.player.board[weakestIdx].hp) {
+        weakestIdx = idx;
+      }
+    });
+    if (weakestIdx !== -1) {
+      const target = state.player.board[weakestIdx];
+      target.atk += 1;
+      target.hp += 1;
+      target.maxHp += 1;
+      triggerHeroPassiveFx("PASIVA: +1/+1", "fx-heal");
+      spawnFx(`#player-slots .unit-slot:nth-child(${weakestIdx + 1})`, "+1/+1", "fx-heal");
+    }
   }
 
   // Trigger active Relics at start of player turn and decrement duration
@@ -2518,6 +2620,10 @@ function render() {
   // Player Slots (Physical Units Standing on Glowing Pedestals + Manual Blocker Selection)
   const playerSlotsEl = document.getElementById("player-slots");
   playerSlotsEl.innerHTML = "";
+  const selectedUnit = state.selectedUnitIndex !== null ? state.player.board[state.selectedUnitIndex] : null;
+  const isCuteHealMode = Boolean(selectedUnit && selectedUnit.cute && !state.reactionWindow && !state.pendingEquip);
+  document.getElementById("player-hero-panel")?.classList.toggle("cute-heal-target", isCuteHealMode);
+
   state.player.board.forEach((unit, idx) => {
     const slot = document.createElement("div");
     slot.className = "unit-slot";
@@ -2527,13 +2633,15 @@ function render() {
       const isSelected = state.selectedUnitIndex === idx;
       const isBlockerPick = Boolean(state.reactionWindow);
       const isEquipPick = Boolean(state.pendingEquip);
+      const isCuteTarget = isCuteHealMode && idx !== state.selectedUnitIndex;
       const isChosenBlocker = isBlockerPick && state.reactionWindow.blockerIdx === idx;
       const token = document.createElement("div");
-      token.className = `unit-token ${unit.ready && !isBlockerPick ? "ready" : ""} ${isSelected || isChosenBlocker ? "selected" : ""} ${isBlockerPick ? "blocker-candidate" : ""} ${isEquipPick ? "equip-target" : ""}`;
+      token.className = `unit-token ${unit.ready && !isBlockerPick ? "ready" : ""} ${isSelected || isChosenBlocker ? "selected" : ""} ${isBlockerPick ? "blocker-candidate" : ""} ${isEquipPick ? "equip-target" : ""} ${isCuteTarget ? "cute-heal-target" : ""}`;
       const badges = [];
       if (unit.guard) badges.push('<span class="badge-icon" title="GUARDIA"><img src="assets/ui/badge_guard.png" alt="Guardia" /></span>');
       if (unit.stealth) badges.push('<span class="badge-icon" title="ESCABULLIRSE"><img src="assets/ui/badge_stealth.png" alt="Escabullirse" /></span>');
       if (unit.pierce) badges.push('<span class="badge-icon" title="PERFORAR"><img src="assets/ui/badge_pierce.png" alt="Perforar" /></span>');
+      if (unit.cute) badges.push('<span class="badge-icon" title="CUTE"><img src="assets/ui/badge_cute.png" alt="Cute" /></span>');
       if (unit.onDeath) badges.push('<span class="badge-icon" title="ULTIMO ALIENTO"><img src="assets/ui/badge_ondeath.png" alt="Al morir" /></span>');
       if (unit.upkeep) badges.push('<span class="badge-icon" title="MERCENARIO: 1 EN/Oro por turno"><img src="assets/ui/badge_upkeep.png" alt="Mercenario" /></span>');
       if (isChosenBlocker) badges.push('<span class="badge-icon active-block" title="BLOQUEANDO"><img src="assets/ui/badge_guard.png" alt="Bloquea" /></span>');
@@ -2554,6 +2662,8 @@ function render() {
         token.addEventListener("click", () => {
           applyEquipToUnit(idx, state.pendingEquip.card, state.pendingEquip.handIndex);
         });
+      } else if (isCuteTarget) {
+        token.addEventListener("click", () => healAllyWithCute(idx));
       } else if (isBlockerPick) {
         token.addEventListener("click", () => {
           state.reactionWindow.blockerIdx = idx;
@@ -4029,3 +4139,28 @@ document.getElementById("collection-tabs")?.querySelectorAll(".collection-tab").
     renderCollectionScreen();
   });
 });
+
+document.getElementById("player-hero-panel")?.addEventListener("click", () => {
+  if (state?.selectedUnitIndex !== null && state?.player?.board?.[state.selectedUnitIndex]?.cute) {
+    healPlayerHeroWithCute();
+  }
+});
+
+(function initSecretPastelUnlock() {
+  let keyBuffer = "";
+  window.addEventListener("keydown", (e) => {
+    if (isPastelUnlocked()) return;
+    keyBuffer = (keyBuffer + (e.key || "").toUpperCase()).slice(-4);
+    if (keyBuffer === "CUTE") {
+      unlockPastelFaction(false);
+    }
+  });
+  let logoClicks = 0;
+  document.querySelector(".title-logo")?.addEventListener("click", () => {
+    if (isPastelUnlocked()) return;
+    logoClicks += 1;
+    if (logoClicks >= 5) {
+      unlockPastelFaction(false);
+    }
+  });
+})();

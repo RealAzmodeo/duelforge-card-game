@@ -877,6 +877,7 @@ body {
 .hand-card.faction-sindicato { --card-bg: url("assets/ui/card_bg_sindicato.png"); }
 .hand-card.faction-legion { --card-bg: url("assets/ui/card_bg_legion.png"); }
 .hand-card.faction-culto { --card-bg: url("assets/ui/card_bg_culto.png"); }
+.hand-card.faction-pastel { --card-bg: url("assets/ui/card_bg_pastel.png"); }
 .hand-card.faction-neutral { --card-bg: url("assets/ui/card_bg_neutral.png"); }
 
 .hand-card.type-Unidad {
@@ -1103,13 +1104,44 @@ body {
 .faction-sindicato { background: #ca8a04; color: #020617; }
 .faction-legion { background: #dc2626; }
 .faction-culto { background: #7e22ce; }
+.faction-pastel { background: linear-gradient(135deg, #f472b6, #c084fc); color: #fff; text-shadow: 0 1px 2px rgba(2, 6, 23, 0.7); }
 .faction-neutral { background: #475569; }
 
-/* 5-Deck Selector on Title Screen */
+.side-badge.cute {
+  background: linear-gradient(135deg, #f472b6, #e879f9);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 6px;
+  border: 1px solid #020617;
+}
+
+.unit-token.cute-heal-target,
+.hero-panel.cute-heal-target {
+  box-shadow: 0 0 18px rgba(244, 114, 182, 0.85);
+  outline: 2px solid #f472b6;
+  cursor: pointer;
+}
+
+.deck-choice-card.secret-locked {
+  border-style: dashed;
+  border-color: #a855f7;
+  background: rgba(30, 16, 46, 0.75);
+  opacity: 0.85;
+}
+
+.deck-choice-card.faction-card-pastel {
+  border-color: #f472b6;
+  background: linear-gradient(160deg, rgba(244, 114, 182, 0.22), rgba(192, 132, 252, 0.22));
+  box-shadow: 0 0 16px rgba(244, 114, 182, 0.28);
+}
+
+/* 6-Deck Selector on Title Screen */
 .deck-selector {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
   margin: 0;
   width: 100%;
   max-width: none;
@@ -1132,12 +1164,12 @@ body {
   --f-accent: #facc15;
   --f-glow: rgba(250, 204, 21, 0.22);
   position: relative;
-  height: clamp(390px, 50vh, 465px);
+  height: clamp(330px, 44vh, 410px);
   background: #090d16;
   border: none;
   outline: none;
   border-radius: 16px;
-  padding: 12px 10px 14px;
+  padding: 10px 8px 12px;
   cursor: pointer;
   text-align: center;
   color: #e2e8f0;
@@ -1155,6 +1187,7 @@ body {
 .deck-choice-card[data-faction="sindicato"] { --f-accent: #fbbf24; --f-glow: rgba(251, 191, 36, 0.24); }
 .deck-choice-card[data-faction="legion"] { --f-accent: #ef4444; --f-glow: rgba(239, 68, 68, 0.26); }
 .deck-choice-card[data-faction="culto"] { --f-accent: #a855f7; --f-glow: rgba(168, 85, 247, 0.26); }
+.deck-choice-card[data-faction="pastel"] { --f-accent: #f472b6; --f-glow: rgba(244, 114, 182, 0.32); }
 
 .deck-hero-bg {
   position: absolute;
