@@ -867,7 +867,7 @@
           <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
           <span class="deck-choice-name">${deck.name}</span>
           <span class="deck-hero-name">${h.name}</span>
-          <span class="deck-choice-desc">${h.passive}</span>
+          <span class="deck-choice-desc">${typeof formatHeroPassiveHtml === "function" ? formatHeroPassiveHtml(deck.id) : h.passive}</span>
         </div>
       `;
       if (typeof attachCardParallax === "function") attachCardParallax(btn);

@@ -619,6 +619,23 @@ const FACTION_HEROES = {
   culto: { id: "moros", name: "Moros, Profeta Sombrio", hp: 30, frame: "assets/ui/portrait_frame_obsidian.png", passive: "Curas +2 HP cuando muere una unidad tuya" }
 };
 
+function formatHeroPassiveHtml(factionId) {
+  switch (factionId) {
+    case "forja":
+      return `<span>+1</span><img class="deck-passive-ic" src="assets/ui/stat_shd.png" alt="SHD" /><span>al inicio de cada turno</span>`;
+    case "arcano":
+      return `<span>Robas +1</span><img class="deck-passive-ic" src="assets/ui/icon_draw.png" alt="Carta" /><span>extra en turno 1</span>`;
+    case "sindicato":
+      return `<span>Empiezas con +2</span><img class="deck-passive-ic" src="assets/ui/icon_coin.png" alt="Oro" /><span>por combate</span>`;
+    case "legion":
+      return `<span>Unidades con</span><img class="deck-passive-ic" src="assets/ui/badge_haste.png" alt="Prisa" /><span>ganan +1</span><img class="deck-passive-ic" src="assets/ui/stat_atk.png" alt="ATK" />`;
+    case "culto":
+      return `<span>Curas +2</span><img class="deck-passive-ic" src="assets/ui/stat_hp.png" alt="HP" /><span>al morir aliada</span><img class="deck-passive-ic" src="assets/ui/badge_ondeath.png" alt="Al morir" />`;
+    default:
+      return FACTION_HEROES[factionId]?.passive || "";
+  }
+}
+
 const BASE_CARD_FACTIONS = {
   golpe: "legion", escudo: "forja", mercenario: "sindicato", moneda: "sindicato",
   golem: "forja", muro: "forja", escudero: "forja", yunque: "forja", martillo: "forja", solar: "forja", ariete: "forja", centinela_runico: "forja", valquiria: "forja",
@@ -775,7 +792,7 @@ function renderDeckSelector() {
         <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
         <span class="deck-choice-name">${deck.name}</span>
         <span class="deck-hero-name">${h.name}</span>
-        <span class="deck-choice-desc">${h.passive}</span>
+        <span class="deck-choice-desc">${formatHeroPassiveHtml(deck.id)}</span>
       </div>
     `;
     attachCardParallax(btn);
@@ -1148,6 +1165,11 @@ function startStageWithConfig(stage, tierIdx = 0) {
   if (runState.inCombat) {
     window.FTUE?.onCombatTurnStart(state);
     window.FTUE?.onCardDrawnOrHandCheck(state);
+    setTimeout(() => {
+      if (runState.faction === "forja") triggerHeroPassiveFx("PASIVA: +1 SHD", "fx-shd");
+      else if (runState.faction === "arcano") triggerHeroPassiveFx("PASIVA: +1 CARTA", "fx-shd");
+      else if (runState.faction === "sindicato") triggerHeroPassiveFx("PASIVA: +2 ORO", "fx-gold");
+    }, 320);
   }
   setTimeout(() => showSpeechBubble("enemy", "rage", `Preparate para caer!`), 450);
   if (autoBattleEnabled) setTimeout(runAutoBattleTurn, 420);
@@ -1677,6 +1699,10 @@ function playCard(handIndex) {
     state.player.energy -= card.cost;
     state.player.hand.splice(handIndex, 1);
     const legionBonus = (runState.faction === "legion" && card.haste) ? 1 : 0;
+    if (legionBonus > 0) {
+      triggerHeroPassiveFx("PASIVA: +1 ATK PRISA", "fx-dmg");
+      spawnFx(vfxTargetSelector, "PASIVA +1 ATK", "fx-dmg");
+    }
     state.player.board[emptySlot] = {
       name: card.name,
       art: card.art,
@@ -1897,7 +1923,7 @@ function triggerUnitDeath(side, slotIndex) {
     const healed = Math.min(2, state.player.maxHp - state.player.hp);
     if (healed > 0) {
       state.player.hp += healed;
-      spawnFx("#player-hero-panel", `+${healed} HP`, "fx-heal");
+      triggerHeroPassiveFx(`PASIVA: +${healed} HP`, "fx-heal");
     }
   }
   if (side === "player" && onDeath) {
@@ -2248,7 +2274,7 @@ function finishEnemyTurn() {
 
   if (runState.faction === "forja") {
     state.player.armor += 1;
-    spawnFx("#player-hero-panel", "+1 SHD", "fx-shd");
+    triggerHeroPassiveFx("PASIVA: +1 SHD", "fx-shd");
   }
 
   // Trigger active Relics at start of player turn and decrement duration
@@ -2298,14 +2324,30 @@ function setHint(text) {
   document.getElementById("combat-hint").textContent = text;
 }
 
+function triggerHeroPassiveFx(label, fxClass = "fx-shd") {
+  const panel = document.getElementById("player-hero-panel");
+  const pill = document.getElementById("player-passive-pill");
+  [panel, pill].forEach((el) => {
+    if (!el) return;
+    el.classList.remove("hero-passive-pulse");
+    void el.offsetWidth;
+    el.classList.add("hero-passive-pulse");
+  });
+  spawnFx("#player-hero-panel", label, fxClass);
+}
+
 function render() {
+  const activeFaction = state.isPvp ? (state.player.factionId || "forja") : runState.faction;
+  const heroInfo = FACTION_HEROES[activeFaction];
   const playerAvatarImg = document.querySelector("#player-avatar-btn img");
-  if (playerAvatarImg) {
-    const heroInfo = FACTION_HEROES[runState.faction];
-    if (heroInfo) {
-      playerAvatarImg.src = `assets/heroes/hero_${runState.faction}_${heroInfo.id}.png`;
-      playerAvatarImg.alt = heroInfo.name;
-    }
+  if (playerAvatarImg && heroInfo) {
+    playerAvatarImg.src = `assets/heroes/hero_${activeFaction}_${heroInfo.id}.png`;
+    playerAvatarImg.alt = heroInfo.name;
+  }
+  const passivePill = document.getElementById("player-passive-pill");
+  if (passivePill && heroInfo) {
+    passivePill.textContent = `PASIVA: ${heroInfo.passive}`;
+    passivePill.title = `${heroInfo.name} - ${heroInfo.passive}`;
   }
   document.getElementById("enemy-name").textContent = state.enemy.name;
   document.getElementById("enemy-avatar-img").src = state.enemy.avatar;
