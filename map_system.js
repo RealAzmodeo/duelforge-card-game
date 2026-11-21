@@ -214,23 +214,85 @@
     return node;
   }
 
-  // Scaled combat encounter builder based on floor (0..10) and node type
-  function getCombatEncounterForNode(node) {
+  const DIFFICULTY_MODES = {
+    estandar: {
+      id: "estandar",
+      label: "ESTANDAR",
+      desc: "Mazos rivales completos y 2-3 jugadas por turno.",
+      hpMult: 1.0,
+      bonusEnergy: 0,
+      bonusStartArmor: 0,
+      handSize: 4,
+      postCombatHeal: 5,
+      upgradedDeck: false
+    },
+    veterano: {
+      id: "veterano",
+      label: "VETERANO",
+      desc: "Rivales +5% HP, +1 SHD inicial y cartas mejoradas.",
+      hpMult: 1.05,
+      bonusEnergy: 0,
+      bonusStartArmor: 1,
+      handSize: 5,
+      postCombatHeal: 4,
+      upgradedDeck: true
+    },
+    titan: {
+      id: "titan",
+      label: "TITAN",
+      desc: "Rivales +9% HP, +1 SHD inicial, escalado Turno 3 y cartas letales.",
+      hpMult: 1.09,
+      bonusEnergy: 0,
+      bonusStartArmor: 1,
+      handSize: 5,
+      postCombatHeal: 3,
+      upgradedDeck: true
+    }
+  };
+
+  function getDifficultyConfig(difficultyId) {
+    return DIFFICULTY_MODES[difficultyId] || DIFFICULTY_MODES.estandar;
+  }
+
+  // Scaled combat encounter builder based on floor (0..10), node type, and difficulty
+  function getCombatEncounterForNode(node, difficultyId = "estandar") {
     const floor = node ? node.floor : 0;
     const type = node ? node.type : "combat";
+    const diff = getDifficultyConfig(difficultyId);
+
+    const buildDeck = (baseIds, extras = []) => {
+      return diff.upgradedDeck ? [...baseIds, ...extras] : [...baseIds];
+    };
+    const isTitan = diff.id === "titan";
 
     if (type === "boss") {
       return {
+        archetypeId: "senor_titan",
         name: "SENOR TITAN",
-        hp: 86,
+        hp: Math.round(25 * diff.hpMult),
         avatar: "assets/heroes/enemy_senor_titan.png",
         frame: "assets/ui/portrait_frame_obsidian.png",
         arenaBg: "assets/ui/arena_bg_3.png",
         cardBack: "assets/ui/card_back_enemy_3.png",
-        baseAtk: 10,
+        baseAtk: 8,
+        startArmor: 1 + diff.bonusStartArmor,
+        baseEnergy: 2,
+        scaleEnergyOnTurn3: isTitan,
+        handSize: diff.handSize,
+        passiveId: "boss_titan",
+        passiveLabel: "+1 SHD/turno | <50% HP: Fase Titan Desatado (+1 EN, +3 SHD, +1/+1 mesa)",
+        vanguardCardId: diff.id === "estandar" ? null : "escudero",
+        deckIds: buildDeck(
+          [
+            "forja_maestro_yunque", "centinela_runico", "forja_escudero_acero",
+            "forja_hacha_titan", "yunque", "forja_aprendiz", "escudero", "ariete",
+            "forja_martillazo", "golpe", "escudo", "neutral_corazon_forja"
+          ],
+          ["forja_coloso", "valquiria"]
+        ),
         summonName: "Coloso Hierro",
         summonAtk: 4,
-        summonHp: 7,
+        summonHp: 6,
         boosterTier: "legendario",
         goldReward: 50,
         isBoss: true,
@@ -240,18 +302,70 @@
 
     if (type === "elite") {
       const tier2 = floor >= 6;
+      if (tier2) {
+        return {
+          archetypeId: "guardian_obsidiana",
+          name: "GUARDIAN OBSIDIANA",
+          hp: Math.round((28 + (floor - 5) * 2) * diff.hpMult),
+          avatar: "assets/heroes/enemy_guardian_obsidiana.png",
+          frame: "assets/ui/portrait_frame_obsidian.png",
+          arenaBg: "assets/ui/arena_bg_3.png",
+          cardBack: "assets/ui/card_back_enemy_3.png",
+          baseAtk: 8,
+          startArmor: 1 + diff.bonusStartArmor,
+          baseEnergy: 2,
+          scaleEnergyOnTurn3: isTitan,
+          handSize: diff.handSize,
+          passiveId: "elite_obsidiana",
+          passiveLabel: "+1 SHD/turno y 2 DMG al Heroe al morir una unidad suya",
+          vanguardCardId: "escudero",
+          deckIds: buildDeck(
+            [
+              "centinela_runico", "forja_maestro_yunque",
+              "culto_acechador", "forja_coraza", "culto_capa",
+              "drenaje", "culto_altar_sangre",
+              "escudo", "escudo", "golpe", "golpe"
+            ],
+            ["culto_verdugo", "culto_drenar_mente"]
+          ),
+          summonName: "Golem Obsidiana",
+          summonAtk: 3 + Math.floor(floor / 5),
+          summonHp: 5 + Math.floor(floor / 4),
+          boosterTier: "epico",
+          goldReward: 26 + floor * 2,
+          isBoss: false,
+          isElite: true
+        };
+      }
       return {
-        name: tier2 ? "GUARDIAN OBSIDIANA" : "COMANDANTE CRISTAL",
-        hp: 56 + floor * 3,
-        avatar: tier2 ? "assets/heroes/enemy_guardian_obsidiana.png" : "assets/heroes/enemy_comandante_cristal.png",
-        frame: tier2 ? "assets/ui/portrait_frame_obsidian.png" : "assets/ui/portrait_frame_crystal.png",
-        arenaBg: tier2 ? "assets/ui/arena_bg_3.png" : "assets/ui/arena_bg_2.png",
-        cardBack: tier2 ? "assets/ui/card_back_enemy_3.png" : "assets/ui/card_back_enemy_2.png",
-        baseAtk: 8 + Math.floor(floor / 3),
-        summonName: tier2 ? "Golem Obsidiana" : "Golem Cristal",
+        archetypeId: "comandante_cristal",
+        name: "COMANDANTE CRISTAL",
+        hp: Math.round((24 + floor * 2) * diff.hpMult),
+        avatar: "assets/heroes/enemy_comandante_cristal.png",
+        frame: "assets/ui/portrait_frame_crystal.png",
+        arenaBg: "assets/ui/arena_bg_2.png",
+        cardBack: "assets/ui/card_back_enemy_2.png",
+        baseAtk: 7,
+        startArmor: 1 + diff.bonusStartArmor,
+        baseEnergy: 2,
+        scaleEnergyOnTurn3: isTitan,
+        handSize: diff.handSize,
+        passiveId: "elite_cristal",
+        passiveLabel: "Vanguardia inicial + 1 SHD y 1 DMG directo por turno",
+        vanguardCardId: "arcano_aprendiz",
+        deckIds: buildDeck(
+          [
+            "arcano_centinela_cristal", "culto_sombra", "culto_acechador",
+            "relampago", "goblin", "arcano_baston", "culto_capa",
+            "descarga", "trampa_hielo", "hielo",
+            "sobrecarga", "golpe", "escudo"
+          ],
+          ["arcano_mago_tormenta", "rayo"]
+        ),
+        summonName: "Golem Cristal",
         summonAtk: 3 + Math.floor(floor / 5),
         summonHp: 5 + Math.floor(floor / 4),
-        boosterTier: floor >= 6 ? "epico" : "raro",
+        boosterTier: "raro",
         goldReward: 26 + floor * 2,
         isBoss: false,
         isElite: true
@@ -261,13 +375,30 @@
     // Normal combat scaled by floor
     if (floor <= 2) {
       return {
+        archetypeId: "capitan_hierro",
         name: "CAPITAN HIERRO",
-        hp: 40 + floor * 4,
+        hp: Math.round((23 + floor * 2) * diff.hpMult),
         avatar: "assets/heroes/enemy_capitan_hierro.png",
         frame: "assets/ui/portrait_frame_iron.png",
         arenaBg: "assets/ui/arena_bg.png",
         cardBack: "assets/ui/card_back_enemy.png",
         baseAtk: 6 + Math.floor(floor / 2),
+        startArmor: (floor === 0 ? 0 : floor) + diff.bonusStartArmor,
+        baseEnergy: 2,
+        scaleEnergyOnTurn3: floor === 2,
+        handSize: diff.handSize,
+        passiveId: "forja_armor",
+        passiveArmorPerTurn: floor === 0 ? 0 : 1,
+        passiveLabel: floor === 0 ? "Disciplina de Hierro (2 jugadas/turno)" : "+1 SHD al inicio de su turno",
+        vanguardCardId: null,
+        deckIds: buildDeck(
+          [
+            "forja_aprendiz", "forja_aprendiz", "escudero", "escudero",
+            "ariete", "golem", "forja_escudo_torre",
+            "forja_martillazo", "golpe", "golpe", "escudo", "escudo"
+          ],
+          ["forja_coraza", "forja_hacha_titan"]
+        ),
         summonName: "Centinela",
         summonAtk: 3,
         summonHp: 4 + Math.floor(floor / 2),
@@ -280,13 +411,29 @@
 
     if (floor <= 6) {
       return {
+        archetypeId: "maga_cristales",
         name: "MAGA DE CRISTALES",
-        hp: 48 + floor * 2,
+        hp: Math.round((26 + (floor - 2) * 2) * diff.hpMult),
         avatar: "assets/heroes/enemy_maga_cristales.png",
         frame: "assets/ui/portrait_frame_crystal.png",
         arenaBg: "assets/ui/arena_bg_2.png",
         cardBack: "assets/ui/card_back_enemy_2.png",
         baseAtk: 7 + Math.floor((floor - 2) / 2),
+        startArmor: 1 + diff.bonusStartArmor,
+        baseEnergy: 2,
+        scaleEnergyOnTurn3: floor >= 4 || isTitan,
+        handSize: diff.handSize,
+        passiveId: "arcano_focus",
+        passiveLabel: "+1 SHD por turno y +1 DMG en hechizos",
+        vanguardCardId: null,
+        deckIds: buildDeck(
+          [
+            "arcano_aprendiz", "arcano_aprendiz", "arcano_centinela_cristal",
+            "cristalomante", "arcano_baston", "arcano_chispazo", "arcano_chispazo",
+            "descarga", "descarga", "hielo", "arcano_congelacion", "arcano_orbe_eco", "escudo"
+          ],
+          ["arcano_mago_tormenta", "rayo"]
+        ),
         summonName: "Golem Cristal",
         summonAtk: 3,
         summonHp: 5 + Math.floor((floor - 2) / 3),
@@ -298,13 +445,30 @@
     }
 
     return {
+      archetypeId: "campeon_forja",
       name: "CAMPEON DE FORJA",
-      hp: 58 + (floor - 6) * 4,
+      hp: Math.round((27 + (floor - 6) * 2) * diff.hpMult),
       avatar: "assets/heroes/enemy_campeon_forja.png",
       frame: "assets/ui/portrait_frame_obsidian.png",
       arenaBg: "assets/ui/arena_bg_3.png",
       cardBack: "assets/ui/card_back_enemy_3.png",
-      baseAtk: 9 + Math.floor((floor - 6) / 2),
+      baseAtk: 8,
+      startArmor: 1 + diff.bonusStartArmor,
+      baseEnergy: 2,
+      scaleEnergyOnTurn3: floor >= 8 || isTitan,
+      handSize: diff.handSize,
+      passiveId: "campeon_rally",
+      passiveLabel: "+1 SHD y +1 ATK a su unidad lider por turno",
+      vanguardCardId: null,
+      deckIds: buildDeck(
+        [
+          "legion_explorador", "berserker", "ariete",
+          "forja_aprendiz", "escudero", "forja_hacha_titan",
+          "yunque", "legion_grito", "forja_martillazo",
+          "golpe", "golpe", "escudo", "escudo", "forja_coraza"
+        ],
+        ["legion_ariete_fuego", "drako"]
+      ),
       summonName: "Centinela Hierro",
       summonAtk: 4,
       summonHp: 6,
@@ -385,6 +549,8 @@
     NODE_META,
     MAP_EVENTS,
     SHOP_RARITY_PRICES,
+    DIFFICULTY_MODES,
+    getDifficultyConfig,
     generateMap,
     createMapRunState,
     canSelectNode,

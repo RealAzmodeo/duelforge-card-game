@@ -517,7 +517,7 @@ function buildEffectFromData(effects = {}) {
     }
     if (effects.gold) {
       state.player.gold += effects.gold;
-      spawnFx("#gold-count", `+${effects.gold} ORO`, "fx-gold");
+      spawnFx("#player-gold", `+${effects.gold} ORO`, "fx-gold");
     }
     if (effects.energy) {
       state.player.energy += effects.energy;
@@ -716,6 +716,55 @@ function unlockPastelFaction(silent = false) {
 
 let selectedStarterDeckId = "forja";
 let selectedCardBackId = "auto";
+const DIFFICULTY_STORAGE_KEY = "duelforge_difficulty_v1";
+let selectedDifficultyId = (() => {
+  try {
+    return localStorage.getItem(DIFFICULTY_STORAGE_KEY) || "estandar";
+  } catch {
+    return "estandar";
+  }
+})();
+
+function getDifficultyModes() {
+  return window.MapSystem?.DIFFICULTY_MODES || {
+    estandar: { id: "estandar", label: "ESTANDAR", desc: "Mazos rivales completos y 2-3 jugadas por turno.", hpMult: 1.0, bonusEnergy: 0, bonusStartArmor: 0, handSize: 4, postCombatHeal: 3, upgradedDeck: false },
+    veterano: { id: "veterano", label: "VETERANO", desc: "Rivales +15% HP, +2 SHD inicial y cartas mejoradas.", hpMult: 1.15, bonusEnergy: 0, bonusStartArmor: 2, handSize: 5, postCombatHeal: 2, upgradedDeck: true },
+    titan: { id: "titan", label: "TITAN", desc: "Rivales +30% HP, +1 Energia por turno y pasivas letales.", hpMult: 1.30, bonusEnergy: 1, bonusStartArmor: 4, handSize: 5, postCombatHeal: 2, upgradedDeck: true }
+  };
+}
+
+function renderDifficultySelector() {
+  const container = document.getElementById("difficulty-selector");
+  const descEl = document.getElementById("difficulty-desc");
+  if (!container) return;
+  const modes = getDifficultyModes();
+  if (!modes[selectedDifficultyId]) selectedDifficultyId = "estandar";
+
+  container.innerHTML = "";
+  Object.values(modes).forEach((mode) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.dataset.difficulty = mode.id;
+    btn.className = `difficulty-pill diff-${mode.id} ${selectedDifficultyId === mode.id ? "active" : ""}`;
+    btn.setAttribute("role", "radio");
+    btn.setAttribute("aria-checked", String(selectedDifficultyId === mode.id));
+    btn.textContent = mode.label;
+    btn.title = mode.desc;
+    btn.addEventListener("click", () => {
+      selectedDifficultyId = mode.id;
+      try {
+        localStorage.setItem(DIFFICULTY_STORAGE_KEY, mode.id);
+      } catch {}
+      window.SFX?.play("click_soft");
+      renderDifficultySelector();
+    });
+    container.appendChild(btn);
+  });
+
+  if (descEl) {
+    descEl.textContent = modes[selectedDifficultyId]?.desc || "";
+  }
+}
 
 const PLAYER_CARD_BACKS = [
   { id: "auto", label: "Auto", src: null },
@@ -1012,6 +1061,18 @@ let state = {};
 let marketFilter = "Todos";
 let marketSort = "none";
 
+window.CARD_CATALOG = CARD_CATALOG;
+Object.defineProperty(window, "runState", {
+  get: () => runState,
+  set: (v) => { runState = v; },
+  configurable: true
+});
+Object.defineProperty(window, "state", {
+  get: () => state,
+  set: (v) => { state = v; },
+  configurable: true
+});
+
 function createCardInstance(templateId, ephemeral = false) {
   const tpl = CARD_CATALOG[templateId];
   return {
@@ -1112,6 +1173,7 @@ function startNewRun() {
   const mapNav = window.MapSystem ? window.MapSystem.createMapRunState() : null;
   runState = {
     stageIndex: 0,
+    difficultyId: selectedDifficultyId || "estandar",
     playerHp: hero.hp,
     playerMaxHp: hero.hp,
     hero,
@@ -1151,7 +1213,7 @@ function startNodeCombat(node) {
     startStage(runState.stageIndex || 0);
     return;
   }
-  const enc = window.MapSystem.getCombatEncounterForNode(node);
+  const enc = window.MapSystem.getCombatEncounterForNode(node, runState.difficultyId || selectedDifficultyId);
   runState.currentEncounter = enc;
   runState.inCombat = true;
   const tierIdx = enc.isBoss ? 2 : enc.isElite ? 1 : 0;
@@ -1160,8 +1222,11 @@ function startNodeCombat(node) {
 
 function startStage(stageIdx) {
   runState.stageIndex = stageIdx;
-  const stage = STAGES[stageIdx];
-  runState.currentEncounter = { ...stage, isBoss: stageIdx >= STAGES.length - 1, isElite: false, goldReward: 15 };
+  const fallbackNode = { floor: stageIdx * 3, type: stageIdx >= STAGES.length - 1 ? "boss" : "combat" };
+  const stage = window.MapSystem
+    ? window.MapSystem.getCombatEncounterForNode(fallbackNode, runState.difficultyId || selectedDifficultyId)
+    : STAGES[stageIdx];
+  runState.currentEncounter = { ...stage, goldReward: stage.goldReward || 15 };
   runState.inCombat = true;
   startStageWithConfig(stage, stageIdx);
 }
@@ -1177,6 +1242,17 @@ function startStageWithConfig(stage, tierIdx = 0) {
   applyCardBackLayers(playerDeckImgEl, playerDeckTopEl, chosenPlayerBack);
 
   const playerDeck = shuffle(runState.permanentDeck).map((id) => createCardInstance(id, false));
+  const fallbackEnemyDeckIds = [
+    "forja_aprendiz", "escudero", "ariete", "golem",
+    "forja_escudo_torre", "forja_martillazo", "golpe", "escudo"
+  ];
+  const rawEnemyIds = Array.isArray(stage.deckIds) && stage.deckIds.length > 0
+    ? stage.deckIds
+    : fallbackEnemyDeckIds;
+  const enemyDeck = shuffle(rawEnemyIds)
+    .filter((id) => Boolean(CARD_CATALOG[id]))
+    .map((id) => createCardInstance(id, false));
+
   const allowedPool = window.CollectionSystem
     ? window.CollectionSystem.getFilteredMarketPool(MARKET_POOL_IDS)
     : MARKET_POOL_IDS;
@@ -1190,6 +1266,24 @@ function startStageWithConfig(stage, tierIdx = 0) {
   }
   const playerFrameEl = document.getElementById("player-frame-img");
   if (playerFrameEl && hero.frame) playerFrameEl.src = hero.frame;
+
+  const initialBoard = [null, null, null];
+  if (stage.vanguardCardId && CARD_CATALOG[stage.vanguardCardId]) {
+    const vCard = CARD_CATALOG[stage.vanguardCardId];
+    initialBoard[0] = {
+      name: vCard.name,
+      art: vCard.art,
+      atk: vCard.atk,
+      hp: vCard.hp,
+      maxHp: vCard.hp,
+      guard: Boolean(vCard.guard),
+      ready: false,
+      stealth: Boolean(vCard.stealth),
+      pierce: Boolean(vCard.pierce),
+      onDeath: vCard.onDeath || null,
+      stunned: false
+    };
+  }
 
   state = {
     turn: 1,
@@ -1211,6 +1305,7 @@ function startStageWithConfig(stage, tierIdx = 0) {
       relics: [null, null]
     },
     enemy: {
+      archetypeId: stage.archetypeId || "capitan_hierro",
       name: stage.name,
       avatar: stage.avatar,
       cardBack: chosenEnemyBack,
@@ -1220,10 +1315,22 @@ function startStageWithConfig(stage, tierIdx = 0) {
       summonName: stage.summonName,
       summonAtk: stage.summonAtk,
       summonHp: stage.summonHp,
-      armor: 0,
-      handCount: 4,
-      deckCount: 10,
-      board: [null, null, null],
+      armor: stage.startArmor || 0,
+      baseEnergy: stage.baseEnergy || 2,
+      scaleEnergyOnTurn3: Boolean(stage.scaleEnergyOnTurn3),
+      handSize: stage.handSize || 4,
+      passiveId: stage.passiveId || "forja_armor",
+      passiveArmorPerTurn: stage.passiveArmorPerTurn || 1,
+      passiveLabel: stage.passiveLabel || "",
+      enraged: false,
+      deck: enemyDeck,
+      hand: [],
+      discard: [],
+      relics: [],
+      plannedCards: [],
+      handCount: 0,
+      deckCount: enemyDeck.length,
+      board: initialBoard,
       intention: null
     },
     marketDeck: marketPool,
@@ -1234,17 +1341,18 @@ function startStageWithConfig(stage, tierIdx = 0) {
     refillMarketSlot(i);
   }
 
+  drawEnemyCards(state.enemy.handSize);
   rollEnemyIntention();
   runState.nextStageBonusGold = 0;
   drawCards(runState.faction === "arcano" ? 6 : 5);
   document.getElementById("game-over-modal").classList.add("hidden");
   document.getElementById("booster-modal").classList.add("hidden");
+  document.getElementById("pvp-action-toast")?.classList.add("hidden");
   clearCombatFinisherEffects();
   render();
   startTurnTimer();
   if (runState.inCombat) {
     window.FTUE?.onCombatTurnStart(state);
-    window.FTUE?.onCardDrawnOrHandCheck(state);
     setTimeout(() => {
       if (runState.faction === "forja") triggerHeroPassiveFx("PASIVA: +1 SHD", "fx-shd");
       else if (runState.faction === "arcano") triggerHeroPassiveFx("PASIVA: +1 CARTA", "fx-shd");
@@ -1285,6 +1393,26 @@ function drawCards(count) {
   }
 }
 
+function checkBossEnrage() {
+  if (state?.isPvp || !state?.enemy || state.gameOver) return;
+  if (state.enemy.passiveId !== "boss_titan" || state.enemy.enraged) return;
+  if (state.enemy.hp > 0 && state.enemy.hp <= Math.ceil(state.enemy.maxHp * 0.5)) {
+    state.enemy.enraged = true;
+    state.enemy.armor += 3;
+    state.enemy.board.forEach((u, idx) => {
+      if (!u) return;
+      u.atk += 1;
+      u.hp += 1;
+      u.maxHp = (u.maxHp || u.hp) + 1;
+      spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, "+1/+1", "fx-dmg");
+    });
+    spawnFx("#enemy-hero-panel", "TITAN DESATADO! +3 SHD", "fx-dmg");
+    showSpeechBubble("enemy", "rage", "FASE 2: TITAN DESATADO!");
+    window.SFX?.play("boss_explosion");
+    triggerShake("#enemy-hero-panel");
+  }
+}
+
 function dealDamageToHero(target, amount) {
   const hero = state[target];
   const blocked = Math.min(hero.armor, amount);
@@ -1304,6 +1432,9 @@ function dealDamageToHero(target, amount) {
     window.VFX?.playHeroHit(selector, 0, true);
   }
   checkGameOver();
+  if (target === "enemy" && !state.gameOver) {
+    checkBossEnrage();
+  }
 }
 
 function clearCombatFinisherEffects() {
@@ -1318,6 +1449,8 @@ function clearCombatFinisherEffects() {
 
 function playCombatFinisher(isVictory, headline, subline, onComplete, isBoss = false) {
   stopTurnTimer();
+  window.FTUE?.dismiss();
+  document.getElementById("pvp-action-toast")?.classList.add("hidden");
   render();
   clearCombatFinisherEffects();
 
@@ -1373,7 +1506,9 @@ function checkGameOver() {
   if (state.enemy.hp <= 0) {
     state.gameOver = true;
     runState.inCombat = false;
-    runState.playerHp = Math.min(runState.playerMaxHp, state.player.hp + 5);
+    const diffCfg = window.MapSystem?.getDifficultyConfig?.(runState.difficultyId);
+    const postHeal = diffCfg?.postCombatHeal ?? 3;
+    runState.playerHp = Math.min(runState.playerMaxHp, state.player.hp + postHeal);
     const enc = runState.currentEncounter;
     if (enc && enc.goldReward) {
       runState.runGold = (runState.runGold || 0) + enc.goldReward;
@@ -1409,6 +1544,8 @@ function checkGameOver() {
 
 function showModal(title, subtitle, isVictory = true) {
   stopTurnTimer();
+  document.getElementById("pvp-action-toast")?.classList.add("hidden");
+  window.FTUE?.dismiss();
   window.SFX?.play(isVictory ? "victory_chime" : "defeat_tone");
   if (isVictory) {
     window.VFX?.celebrate("victory");
@@ -1416,6 +1553,10 @@ function showModal(title, subtitle, isVictory = true) {
   const banner = document.getElementById("gameover-banner-img");
   if (banner) {
     banner.src = isVictory ? "assets/ui/banner_victory.png" : "assets/ui/banner_defeat.png";
+  }
+  const restartBtn = document.getElementById("restart-btn");
+  if (restartBtn) {
+    restartBtn.textContent = state?.isPvp ? "VOLVER A LA SALA VS" : "JUGAR DE NUEVO";
   }
   document.getElementById("modal-title").textContent = title;
   document.getElementById("modal-subtitle").textContent = subtitle;
@@ -1750,6 +1891,7 @@ function applyEquipToUnit(slotIndex, card, handIndex) {
   window.VFX?.playCardPlay(card, null, targetSlotSel);
   setHint(`Equipaste ${card.name} en ${unit.name}.`);
   render();
+  window.FTUE?.onCardPlayed(card, state);
 }
 
 function playCard(handIndex) {
@@ -1839,6 +1981,7 @@ function playCard(handIndex) {
       return;
     }
     state.pendingEquip = { handIndex, card };
+    window.FTUE?.dismiss();
     setHint(`Selecciona una unidad aliada en mesa para equipar ${card.name}.`);
     render();
     return;
@@ -1860,7 +2003,11 @@ function playCard(handIndex) {
   state.selectedUnitIndex = null;
   state.pendingEquip = null;
   render();
-  window.FTUE?.onCardPlayed(card, state);
+  if (inReaction && card.reaction) {
+    window.FTUE?.onReactionResolved();
+  } else {
+    window.FTUE?.onCardPlayed(card, state);
+  }
 }
 
 function buyMarketCard(marketIndex) {
@@ -1949,6 +2096,7 @@ document.addEventListener("click", (e) => {
     return;
   }
   if (state?.selectedUnitIndex === null || !state?.isPlayerTurn || state?.gameOver) return;
+  if (e.target.closest("#ftue-overlay") || e.target.closest("#ftue-cheatsheet-modal")) return;
   const inPlayerUnit = e.target.closest("#player-slots .unit-token");
   const inEnemyUnit = e.target.closest("#enemy-slots .unit-token");
   const inEnemyHero = e.target.closest("#enemy-hero-panel");
@@ -1984,6 +2132,7 @@ function selectPlayerUnit(slotIndex) {
     setHint("Seleccion cancelada.");
   } else {
     state.selectedUnitIndex = slotIndex;
+    window.FTUE?.onUnitSelectedForAttack();
     setHint(`Unidad ${unit.name} lista: apunta con la flecha a una unidad rival o al Heroe rival (clic fuera para cancelar).`);
     const origin = getAttackArrowOrigin(slotIndex);
     if (origin) updateAttackArrow(origin.x, origin.y - 70, null);
@@ -2012,7 +2161,7 @@ function triggerUnitDeath(side, slotIndex) {
   if (side === "player" && onDeath) {
     if (onDeath.gold) {
       state.player.gold += onDeath.gold;
-      spawnFx("#gold-count", `+${onDeath.gold} ORO`, "fx-gold");
+      spawnFx("#player-gold", `+${onDeath.gold} ORO`, "fx-gold");
     }
     if (onDeath.armor) {
       state.player.armor += onDeath.armor;
@@ -2031,6 +2180,32 @@ function triggerUnitDeath(side, slotIndex) {
     }
     if (onDeath.draw) {
       drawCards(onDeath.draw);
+    }
+  }
+  if (side === "enemy" && !state.isPvp) {
+    if (state.enemy.passiveId === "elite_obsidiana" && !state.gameOver) {
+      spawnFx("#enemy-hero-panel", "PASIVA OBSIDIANA 2 DMG", "fx-dmg");
+      dealDamageToHero("player", 2);
+    }
+    if (onDeath && !state.gameOver) {
+      if (onDeath.armor) {
+        state.enemy.armor += onDeath.armor;
+        spawnFx("#enemy-hero-panel", `+${onDeath.armor} SHD`, "fx-shd");
+      }
+      if (onDeath.damageHero) {
+        spawnVfxShape("#player-hero-panel", "vfx-slash");
+        dealDamageToHero("player", onDeath.damageHero);
+      }
+      if (onDeath.heal) {
+        const h = Math.min(onDeath.heal, state.enemy.maxHp - state.enemy.hp);
+        if (h > 0) {
+          state.enemy.hp += h;
+          spawnFx("#enemy-hero-panel", `+${h} HP`, "fx-heal");
+        }
+      }
+      if (onDeath.draw) {
+        drawEnemyCards(onDeath.draw);
+      }
     }
   }
 }
@@ -2149,38 +2324,195 @@ function attackEnemyHero() {
   });
 }
 
-function rollEnemyIntention() {
-  const hasEmptySlot = state.enemy.board.some((u) => u === null);
-  const roll = Math.random();
-  if (hasEmptySlot && roll < 0.42) {
-    state.enemy.intention = {
-      type: "summon",
-      label: `Invocar ${state.enemy.summonName} (${state.enemy.summonAtk}/${state.enemy.summonHp} GUARDIA)`
-    };
-  } else if (roll < 0.74) {
-    const dmg = state.enemy.baseAtk + Math.floor(state.turn / 2);
-    state.enemy.intention = {
-      type: "attack",
-      stealth: false,
-      amount: dmg,
-      cardName: "Golpe Brutal",
-      art: "assets/cards/golpe.png",
-      label: `Atacar por ${dmg}`
-    };
-  } else if (roll < 0.82) {
-    const dmg = Math.max(4, Math.floor((state.enemy.baseAtk + Math.floor(state.turn / 2)) * 0.6));
-    state.enemy.intention = {
-      type: "attack",
-      stealth: true,
-      amount: dmg,
-      cardName: "Emboscada Sigilosa",
-      art: "assets/cards/relampago.png",
-      label: `Emboscada Sigilosa (${dmg} - NO BLOQUEABLE)`
-    };
-  } else {
-    const shd = 6 + runState.stageIndex * 2;
-    state.enemy.intention = { type: "armor", amount: shd, label: `Ganar +${shd} SHD` };
+function drawEnemyCards(count) {
+  if (!state.enemy || !Array.isArray(state.enemy.deck)) return 0;
+  let drawn = 0;
+  for (let i = 0; i < count; i++) {
+    if (state.enemy.deck.length === 0) {
+      if (!state.enemy.discard || state.enemy.discard.length === 0) break;
+      state.enemy.deck = shuffle(state.enemy.discard);
+      state.enemy.discard = [];
+    }
+    state.enemy.hand.push(state.enemy.deck.pop());
+    drawn++;
   }
+  state.enemy.handCount = state.enemy.hand.length;
+  state.enemy.deckCount = state.enemy.deck.length;
+  return drawn;
+}
+
+const LEGACY_ENEMY_DESCRIPTORS = {
+  golpe: { damageHero: 4 },
+  escudo: { armor: 5 },
+  plasma: { damageHero: 8, draw: 1 },
+  cofre: { armor: 6, draw: 1 },
+  furia: { buffAllies: { atk: 3, hp: 0 } },
+  lingote: { armor: 4, draw: 1 },
+  yunque: { buffAllies: { atk: 2, hp: 2 } },
+  rayo: { damageEnemyUnitOrHero: 5, damageHero: 6 },
+  martillo: { damageAllUnitsOnly: 4 },
+  pocion: { heal: 8, draw: 1 },
+  hielo: { armor: 7, draw: 1 },
+  runica: { damageHero: 11 },
+  drenaje: { damageHero: 5, heal: 4 },
+  solar: { armor: 14 },
+  sobrecarga: { energy: 2 },
+  corona: { energy: 2, draw: 2 }
+};
+
+function getEnemyCardDescriptor(card) {
+  if (!card) return {};
+  if (card.syntheticEffect) return card.syntheticEffect;
+  if (card.effects) return card.effects;
+  return LEGACY_ENEMY_DESCRIPTORS[card.id] || {};
+}
+
+function getEnemyCardHeroDmg(card, playerHasUnits = false) {
+  if (!card) return 0;
+  const desc = getEnemyCardDescriptor(card);
+  const spellBonus = state.enemy?.passiveId === "arcano_focus" && card.type === "Hechizo" ? 1 : 0;
+  let dmg = 0;
+  if (card.type === "Unidad") {
+    if (card.haste) dmg += card.atk || 0;
+    if (card.id === "goblin") dmg += 2;
+    return dmg;
+  }
+  if (desc.damageHero) dmg += desc.damageHero + spellBonus;
+  if (desc.damageAllEnemiesAndHero) dmg += desc.damageAllEnemiesAndHero + spellBonus;
+  if (desc.damageEnemyUnitOrHero && !playerHasUnits) dmg += desc.damageEnemyUnitOrHero + spellBonus;
+  return dmg;
+}
+
+function scoreEnemyCardForPlan(card, simUnits, simEmptySlots, simEnergy, remainingHandCount) {
+  if (!card || card.cost > simEnergy) return -999;
+  if (card.type === "Unidad" && simEmptySlots <= 0) return -999;
+  const desc = getEnemyCardDescriptor(card);
+  if (card.type === "Equipo" && simUnits <= 0) return -999;
+  const isPureBuff = Boolean(desc.buffAllies && !desc.damageHero && !desc.armor && !desc.heal);
+  if (isPureBuff && simUnits <= 0) return -999;
+
+  const playerUnits = state.player.board.filter(Boolean).length;
+  const hpRatio = state.enemy.hp / Math.max(1, state.enemy.maxHp);
+
+  if (desc.energy && remainingHandCount > 0) return 130;
+
+  if (card.type === "Unidad") {
+    let sc = (card.atk || 0) * 14 + (card.hp || 0) * 6;
+    if (card.haste) sc += 22;
+    if (card.guard) sc += 14;
+    if (card.stealth) sc += 18;
+    if (card.pierce) sc += 10;
+    if (card.onDeath) sc += 12;
+    return sc + (card.cost === 0 ? 15 : 0);
+  }
+
+  if (card.type === "Equipo") {
+    const eq = card.equipStats || {};
+    return 48 + (eq.atk || 0) * 12 + (eq.hp || 0) * 6 + (eq.haste ? 16 : 0) + (eq.guard ? 10 : 0);
+  }
+
+  if (card.type === "Reliquia") {
+    return (state.enemy.relics?.length || 0) >= 2 ? 15 : 58;
+  }
+
+  let sc = 36;
+  if (desc.buffAllies) sc += simUnits * 26;
+  if (desc.damageAllEnemiesAndHero || desc.damageAllUnitsOnly) sc += playerUnits * 28 + 14;
+  if (desc.stunAllEnemies) sc += playerUnits * 24;
+  if (desc.stunEnemyUnit && playerUnits > 0) sc += 26;
+  if (desc.damageEnemyUnitOrHero) sc += playerUnits > 0 ? 34 : 22;
+  if (desc.damageHero) sc += desc.damageHero * 4.5;
+  if (desc.armor) sc += desc.armor * 3.5;
+  if (desc.heal) sc += hpRatio < 0.78 ? desc.heal * 5 : -10;
+  if (desc.draw) sc += 12;
+  return sc;
+}
+
+function rollEnemyIntention() {
+  if (!state.enemy || !Array.isArray(state.enemy.hand)) return;
+
+  const targetHand = state.enemy.handSize || 4;
+  if (state.enemy.hand.length < targetHand) {
+    drawEnemyCards(targetHand - state.enemy.hand.length);
+  }
+
+  let turnEnergy = state.enemy.baseEnergy || 2;
+  if (state.enemy.scaleEnergyOnTurn3 && state.turn >= 3) turnEnergy += 1;
+  if (state.enemy.passiveId === "boss_titan" && state.enemy.enraged) turnEnergy += 1;
+
+  const isFloor0 = runState.mapNav ? runState.mapNav.currentFloor <= 1 : runState.stageIndex === 0;
+  const maxPlays = isFloor0 && (runState.difficultyId || "estandar") === "estandar" ? 2 : 3;
+
+  let simEnergy = turnEnergy;
+  let simUnits = state.enemy.board.filter(Boolean).length;
+  let simEmptySlots = 3 - simUnits;
+  const pool = [...state.enemy.hand];
+  const planned = [];
+
+  for (let p = 0; p < maxPlays; p++) {
+    let bestIdx = -1;
+    let bestScore = -100;
+    for (let i = 0; i < pool.length; i++) {
+      const sc = scoreEnemyCardForPlan(pool[i], simUnits, simEmptySlots, simEnergy, pool.length - 1);
+      if (sc > bestScore) {
+        bestScore = sc;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx === -1) break;
+    const picked = pool.splice(bestIdx, 1)[0];
+    planned.push(picked);
+    simEnergy -= picked.cost;
+    const desc = getEnemyCardDescriptor(picked);
+    if (desc.energy) simEnergy += desc.energy;
+    if (picked.type === "Unidad") {
+      simUnits += 1;
+      simEmptySlots -= 1;
+    }
+  }
+
+  // Fallback tactical strike if board is full and hand holds only unplayable units
+  if (planned.length === 0) {
+    const fallbackDmg = Math.max(4, Math.floor((state.enemy.baseAtk || 6) * 0.85));
+    planned.push({
+      id: "asalto_tactico",
+      name: "Asalto Coordinado",
+      type: "Hechizo",
+      art: "assets/cards/golpe.png",
+      cost: 0,
+      shortTag: `DMG ${fallbackDmg} + 3 SHD`,
+      syntheticEffect: { damageHero: fallbackDmg, armor: 3 }
+    });
+  }
+
+  // Order cleanly: Energy -> Units -> Equips -> Relics/Buffs -> Control/Spells
+  const playOrderWeight = (c) => {
+    const desc = getEnemyCardDescriptor(c);
+    if (desc.energy) return 0;
+    if (c.type === "Unidad") return 1;
+    if (c.type === "Equipo") return 2;
+    if (c.type === "Reliquia" || desc.buffAllies) return 3;
+    return 4;
+  };
+  planned.sort((a, b) => playOrderWeight(a) - playOrderWeight(b));
+
+  const readyBoardAtk = state.enemy.board.reduce((sum, u) => sum + (u && !u.stunned ? u.atk : 0), 0);
+  const playerHasUnits = state.player.board.some(Boolean);
+  const plannedDirectDmg = planned.reduce((sum, c) => sum + getEnemyCardHeroDmg(c, playerHasUnits), 0);
+  const firstDmgCard = planned.find((c) => getEnemyCardHeroDmg(c, playerHasUnits) > 0) || planned[0];
+  const cardNames = planned.map((c) => c.name);
+
+  state.enemy.intention = {
+    type: (readyBoardAtk + plannedDirectDmg) > 0 ? "attack" : (planned.some((c) => c.type === "Unidad") ? "summon" : "armor"),
+    stealth: planned.some((c) => c.stealth) && readyBoardAtk === 0,
+    amount: plannedDirectDmg,
+    boardThreat: readyBoardAtk,
+    cardName: firstDmgCard?.name || "Asalto Rival",
+    art: firstDmgCard?.art || state.enemy.avatar,
+    plannedCards: planned,
+    label: cardNames.join(" + ") + (readyBoardAtk > 0 ? ` | Mesa: ${readyBoardAtk}` : ""),
+    tooltip: `${state.enemy.name} (${turnEnergy} EN)\nJugara: ${planned.map((c) => `${c.name} [${c.shortTag}]`).join(" -> ")}${readyBoardAtk > 0 ? `\nAtaque de mesa: ${readyBoardAtk} DMG` : ""}\nPasiva: ${state.enemy.passiveLabel || "Ninguna"}`
+  };
 }
 
 function endTurn() {
@@ -2192,6 +2524,9 @@ function endTurn() {
   }
   stopTurnTimer();
   window.FTUE?.onTurnEnd();
+  state.player.board.forEach((u) => {
+    if (u && u.stunned) u.stunned = false;
+  });
   state.isPlayerTurn = false;
   state.selectedUnitIndex = null;
   render();
@@ -2211,10 +2546,14 @@ function openReactionWindow(enemyCardMeta, onResolve) {
   const numEl = document.getElementById("reaction-timer-num");
   const passBtn = document.getElementById("reaction-pass-btn");
 
-  const defaultGuardIdx = state.player.board.findIndex((u) => u && u.guard);
+  const canBlockWithUnit = enemyCardMeta.canBlockWithUnit !== false;
+  const defaultGuardIdx = canBlockWithUnit
+    ? state.player.board.findIndex((u) => u && u.guard && !u.stunned)
+    : -1;
   state.reactionWindow = {
     totalDmg: enemyCardMeta.dmg,
     blockerIdx: defaultGuardIdx !== -1 ? defaultGuardIdx : null,
+    canBlockWithUnit,
     timeLeft: 5.0
   };
 
@@ -2232,7 +2571,9 @@ function openReactionWindow(enemyCardMeta, onResolve) {
     </div>
   `;
 
-  textEl.textContent = `${state.enemy.name} juega ${enemyCardMeta.name} (${enemyCardMeta.dmg} DMG). Elige bloqueador o responde con [REACCION].`;
+  textEl.textContent = canBlockWithUnit
+    ? `${state.enemy.name} ataca (${enemyCardMeta.dmg} DMG). Elige bloqueador o responde con [REACCION].`
+    : `${state.enemy.name} lanza ${enemyCardMeta.name} (${enemyCardMeta.dmg} DMG). Responde con [REACCION] o pulsa DEJAR PASAR.`;
   banner.classList.remove("hidden");
   render();
   window.FTUE?.onReactionOpen();
@@ -2269,109 +2610,373 @@ function openReactionWindow(enemyCardMeta, onResolve) {
   }, 100);
 }
 
+let enemyToastTimer = null;
+function showEnemyActionToast(card, detail) {
+  const el = document.getElementById("pvp-action-toast");
+  if (!el || !card) return;
+  el.innerHTML = `${card.art ? `<img src="${card.art}" alt="" />` : ""}<span>${state.enemy.name} juega <b>${card.name}</b>${detail ? ` (${detail})` : ""}</span>`;
+  el.classList.remove("hidden");
+  if (enemyToastTimer) clearTimeout(enemyToastTimer);
+  enemyToastTimer = setTimeout(() => {
+    el.classList.add("hidden");
+  }, 1350);
+}
+
+function applyEnemyDescriptor(desc, sourceType, ctx) {
+  if (!desc || state.gameOver) return;
+  const spellBonus = state.enemy?.passiveId === "arcano_focus" && sourceType === "Hechizo" ? 1 : 0;
+
+  if (desc.armor) {
+    state.enemy.armor += desc.armor;
+    spawnVfxShape("#enemy-hero-panel", "vfx-beam");
+    spawnFx("#enemy-hero-panel", `+${desc.armor} SHD`, "fx-shd");
+  }
+  if (desc.heal) {
+    const healed = Math.min(desc.heal, state.enemy.maxHp - state.enemy.hp);
+    if (healed > 0) {
+      state.enemy.hp += healed;
+      spawnFx("#enemy-hero-panel", `+${healed} HP`, "fx-heal");
+    }
+  }
+  if (desc.draw) {
+    drawEnemyCards(desc.draw);
+  }
+  if (desc.buffAllies) {
+    state.enemy.board.forEach((u, idx) => {
+      if (!u) return;
+      u.atk += desc.buffAllies.atk || 0;
+      u.hp += desc.buffAllies.hp || 0;
+      u.maxHp = (u.maxHp || u.hp) + (desc.buffAllies.hp || 0);
+      spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, `+${desc.buffAllies.atk || 0}/+${desc.buffAllies.hp || 0}`, "fx-gold");
+    });
+  }
+  if (desc.damageEnemyUnitOrHero) {
+    const dmg = desc.damageEnemyUnitOrHero + spellBonus;
+    // Target highest priority player unit (Guard first, then highest ATK)
+    const candidates = state.player.board
+      .map((u, idx) => ({ u, idx }))
+      .filter((x) => x.u);
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => (b.u.guard ? 1 : 0) - (a.u.guard ? 1 : 0) || b.u.atk - a.u.atk);
+      const targetIdx = candidates[0].idx;
+      const pu = state.player.board[targetIdx];
+      pu.hp -= dmg;
+      const sel = `#player-slots .unit-slot:nth-child(${targetIdx + 1})`;
+      spawnVfxShape(sel, "vfx-slash");
+      spawnFx(sel, `-${dmg}`, "fx-dmg");
+      if (desc.stunEnemyUnit && pu.hp > 0) {
+        pu.stunned = true;
+        pu.ready = false;
+        spawnFx(sel, "ATURDIDA", "fx-shd");
+      }
+      if (pu.hp <= 0) triggerUnitDeath("player", targetIdx);
+    } else {
+      ctx.pendingSpellHeroDmg += dmg;
+    }
+  } else if (desc.stunEnemyUnit) {
+    const candidates = state.player.board
+      .map((u, idx) => ({ u, idx }))
+      .filter((x) => x.u && !x.u.stunned);
+    if (candidates.length > 0) {
+      candidates.sort((a, b) => (b.u.guard ? 1 : 0) - (a.u.guard ? 1 : 0) || b.u.atk - a.u.atk);
+      const targetIdx = candidates[0].idx;
+      state.player.board[targetIdx].stunned = true;
+      state.player.board[targetIdx].ready = false;
+      spawnFx(`#player-slots .unit-slot:nth-child(${targetIdx + 1})`, "ATURDIDA", "fx-shd");
+    }
+  }
+
+  if (desc.damageAllUnitsOnly) {
+    const dmg = desc.damageAllUnitsOnly + spellBonus;
+    state.player.board.forEach((pu, idx) => {
+      if (!pu) return;
+      pu.hp -= dmg;
+      const sel = `#player-slots .unit-slot:nth-child(${idx + 1})`;
+      spawnVfxShape(sel, "vfx-burst");
+      spawnFx(sel, `-${dmg}`, "fx-dmg");
+      if (pu.hp <= 0) triggerUnitDeath("player", idx);
+    });
+  }
+
+  if (desc.damageAllEnemiesAndHero) {
+    const dmg = desc.damageAllEnemiesAndHero + spellBonus;
+    state.player.board.forEach((pu, idx) => {
+      if (!pu) return;
+      pu.hp -= dmg;
+      const sel = `#player-slots .unit-slot:nth-child(${idx + 1})`;
+      spawnVfxShape(sel, "vfx-slash");
+      spawnFx(sel, `-${dmg}`, "fx-dmg");
+      if (desc.stunAllEnemies && pu.hp > 0) {
+        pu.stunned = true;
+        pu.ready = false;
+        spawnFx(sel, "ATURDIDA", "fx-shd");
+      }
+      if (pu.hp <= 0) triggerUnitDeath("player", idx);
+    });
+    ctx.pendingSpellHeroDmg += dmg;
+  } else if (desc.stunAllEnemies) {
+    state.player.board.forEach((pu, idx) => {
+      if (!pu) return;
+      pu.stunned = true;
+      pu.ready = false;
+      spawnFx(`#player-slots .unit-slot:nth-child(${idx + 1})`, "ATURDIDA", "fx-shd");
+    });
+  }
+
+  if (desc.damageHero) {
+    ctx.pendingSpellHeroDmg += desc.damageHero + spellBonus;
+  }
+}
+
+function resolveEnemyCardPlay(card, ctx) {
+  if (!card || state.gameOver) return;
+
+  if (card.type === "Unidad") {
+    const emptyIdx = state.enemy.board.findIndex((u) => u === null);
+    if (emptyIdx !== -1) {
+      window.SFX?.play("play_card");
+      state.enemy.board[emptyIdx] = {
+        name: card.name,
+        art: card.art,
+        atk: card.atk,
+        hp: card.hp,
+        maxHp: card.hp,
+        guard: Boolean(card.guard),
+        ready: Boolean(card.haste),
+        stealth: Boolean(card.stealth),
+        pierce: Boolean(card.pierce),
+        onDeath: card.onDeath || null,
+        stunned: false
+      };
+      spawnFx(`#enemy-slots .unit-slot:nth-child(${emptyIdx + 1})`, card.haste ? "PRISA!" : "INVOCADA", "fx-gold");
+      if (card.id === "goblin") {
+        ctx.pendingSpellHeroDmg += 2;
+      } else if (card.id === "cristalomante") {
+        drawEnemyCards(1);
+      }
+    }
+    return;
+  }
+
+  if (card.type === "Equipo") {
+    const targetCandidates = state.enemy.board
+      .map((u, idx) => ({ u, idx }))
+      .filter((x) => x.u);
+    if (targetCandidates.length > 0) {
+      targetCandidates.sort((a, b) => b.u.atk - a.u.atk || b.u.hp - a.u.hp);
+      const { u, idx } = targetCandidates[0];
+      const st = card.equipStats || {};
+      if (st.atk) u.atk += st.atk;
+      if (st.hp) {
+        u.hp += st.hp;
+        u.maxHp = (u.maxHp || u.hp) + st.hp;
+      }
+      if (st.guard) u.guard = true;
+      if (st.pierce) u.pierce = true;
+      if (st.stealth) u.stealth = true;
+      if (st.haste && !u.stunned) u.ready = true;
+      u.equips = u.equips || [];
+      u.equips.push(card.name);
+      window.SFX?.play("heal_buff");
+      spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, `+${st.atk || 0}/+${st.hp || 0}`, "fx-gold");
+    }
+    return;
+  }
+
+  if (card.type === "Reliquia") {
+    window.SFX?.play("heal_buff");
+    state.enemy.relics = state.enemy.relics || [];
+    if (state.enemy.relics.length >= 2) state.enemy.relics.shift();
+    state.enemy.relics.push({
+      id: card.id,
+      name: card.name,
+      duration: card.duration || 3,
+      effects: card.effects || {}
+    });
+    spawnFx("#enemy-hero-panel", `RELIQUIA: ${card.name}`, "fx-shd");
+    return;
+  }
+
+  window.SFX?.play("play_card");
+  applyEnemyDescriptor(getEnemyCardDescriptor(card), card.type, ctx);
+}
+
+function applyEnemyPassiveTurnStart(ctx) {
+  const pid = state.enemy.passiveId;
+  if (pid === "forja_armor") {
+    const shd = state.enemy.passiveArmorPerTurn || 0;
+    if (shd > 0) {
+      state.enemy.armor += shd;
+      spawnFx("#enemy-hero-panel", `PASIVA +${shd} SHD`, "fx-shd");
+    }
+  } else if (pid === "arcano_focus") {
+    state.enemy.armor += 1;
+    spawnFx("#enemy-hero-panel", "PASIVA +1 SHD", "fx-shd");
+  } else if (pid === "campeon_rally") {
+    state.enemy.armor += 1;
+    const leadIdx = state.enemy.board.findIndex((u) => Boolean(u));
+    if (leadIdx !== -1) {
+      state.enemy.board[leadIdx].atk += 1;
+      spawnFx(`#enemy-slots .unit-slot:nth-child(${leadIdx + 1})`, "+1 ATK", "fx-gold");
+    }
+  } else if (pid === "elite_cristal") {
+    state.enemy.armor += 1;
+    ctx.pendingSpellHeroDmg += 1;
+    spawnFx("#enemy-hero-panel", "PASIVA +1 SHD", "fx-shd");
+  } else if (pid === "elite_obsidiana") {
+    state.enemy.armor += 1;
+    spawnFx("#enemy-hero-panel", "PASIVA +1 SHD", "fx-shd");
+  } else if (pid === "boss_titan") {
+    const shd = state.enemy.enraged ? 2 : 1;
+    state.enemy.armor += shd;
+    spawnFx("#enemy-hero-panel", `TITAN +${shd} SHD`, "fx-shd");
+  }
+
+  // Trigger active enemy relics
+  const nextRelics = [];
+  (state.enemy.relics || []).forEach((rel) => {
+    if (!rel) return;
+    applyEnemyDescriptor(rel.effects, "Reliquia", ctx);
+    rel.duration -= 1;
+    if (rel.duration > 0) nextRelics.push(rel);
+  });
+  state.enemy.relics = nextRelics;
+}
+
 function executeEnemyTurn() {
   if (state.gameOver) return;
   state.enemy.armor = 0;
 
-  const readyAttackers = [];
+  // Existing board units wake up (unless stunned)
   state.enemy.board.forEach((u, idx) => {
     if (!u) return;
     if (u.stunned) {
       u.stunned = false;
-      u.ready = true;
+      u.ready = false;
       spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, "ATURDIDA", "fx-shd");
-      return;
-    }
-    if (u.ready) {
-      readyAttackers.push({ unit: u, idx });
     } else {
       u.ready = true;
     }
   });
 
-  const intent = state.enemy.intention;
-  if (intent.type === "armor") {
-    state.enemy.armor += intent.amount;
-    spawnFx("#enemy-hero-panel", `+${intent.amount} SHD`, "fx-shd");
-  } else if (intent.type === "summon") {
-    const emptyIdx = state.enemy.board.findIndex((u) => u === null);
-    if (emptyIdx !== -1) {
-      state.enemy.board[emptyIdx] = {
-        name: state.enemy.summonName,
-        art: "assets/cards/golem.png",
-        atk: state.enemy.summonAtk,
-        hp: state.enemy.summonHp,
-        guard: true,
-        ready: false
-      };
-    }
-  }
+  const combatCtx = { pendingSpellHeroDmg: 0 };
+  applyEnemyPassiveTurnStart(combatCtx);
+  checkBossEnrage();
 
-  const incomingDmg =
-    readyAttackers.reduce((sum, a) => sum + a.unit.atk, 0) +
-    (intent.type === "attack" ? intent.amount : 0);
+  const intent = state.enemy.intention || {};
+  const planned = Array.isArray(intent.plannedCards) ? [...intent.plannedCards] : [];
 
-  if (incomingDmg <= 0) {
-    finishEnemyTurn();
-    return;
-  }
+  function resolveEnemyCombatPhase() {
+    if (state.gameOver) return;
+    checkBossEnrage();
 
-  // Escabullirse (stealth): cannot be reacted to or blocked!
-  if (intent.type === "attack" && intent.stealth && readyAttackers.length === 0) {
-    spawnFx("#enemy-hero-panel", "ESCABULLIRSE!", "fx-dmg");
-    dealDamageToHero("player", intent.amount);
-    setHint(`${state.enemy.name} uso Emboscada Sigilosa (Escabullirse) por ${intent.amount} DMG!`);
-    finishEnemyTurn();
-    return;
-  }
-
-  const enemyCardMeta = {
-    name: intent.type === "attack" ? (intent.cardName || "Asalto Rival") : readyAttackers[0].unit.name,
-    art: intent.type === "attack" ? (intent.art || state.enemy.avatar) : readyAttackers[0].unit.art,
-    dmg: incomingDmg
-  };
-
-  openReactionWindow(enemyCardMeta, (blockerIdx) => {
-    // Resolve ready enemy units
-    readyAttackers.forEach(({ unit, idx }) => {
-      if (unit.hp <= 0) return;
-      const targetIdx =
-        blockerIdx !== null && state.player.board[blockerIdx]
-          ? blockerIdx
-          : state.player.board.findIndex((pu) => pu && pu.guard);
-
-      if (targetIdx !== -1) {
-        const pu = state.player.board[targetIdx];
-        pu.hp -= unit.atk;
-        unit.hp -= pu.atk;
-        spawnFx(`#player-slots .unit-slot:nth-child(${targetIdx + 1})`, `-${unit.atk}`, "fx-dmg");
-        spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, `-${pu.atk}`, "fx-dmg");
-        if (pu.hp <= 0) triggerUnitDeath("player", targetIdx);
-      } else {
-        dealDamageToHero("player", unit.atk);
-      }
-    });
-
+    const readyAttackers = [];
     state.enemy.board.forEach((u, idx) => {
-      if (u && u.hp <= 0) triggerUnitDeath("enemy", idx);
+      if (u && u.ready && !u.stunned) {
+        readyAttackers.push({ unit: u, idx });
+      }
     });
 
-    // Resolve enemy hero direct attack
-    if (intent.type === "attack" && !state.gameOver) {
-      const heroBlockerIdx =
-        blockerIdx !== null && state.player.board[blockerIdx] ? blockerIdx : -1;
-      if (heroBlockerIdx !== -1 && readyAttackers.length === 0) {
-        const pu = state.player.board[heroBlockerIdx];
-        pu.hp -= intent.amount;
-        spawnFx(`#player-slots .unit-slot:nth-child(${heroBlockerIdx + 1})`, `-${intent.amount} BLOQ`, "fx-dmg");
-        if (pu.hp <= 0) triggerUnitDeath("player", heroBlockerIdx);
-      } else {
-        dealDamageToHero("player", intent.amount);
-      }
+    const unitDmg = readyAttackers.reduce((sum, a) => sum + a.unit.atk, 0);
+    const incomingDmg = unitDmg + combatCtx.pendingSpellHeroDmg;
+
+    if (incomingDmg <= 0) {
+      finishEnemyTurn();
+      return;
     }
 
-    finishEnemyTurn();
-  });
+    const hasBlockableUnitAttack = readyAttackers.some((a) => !a.unit.stealth);
+    const hasPlayableReaction = state.player.hand.some((c) => c.reaction && c.cost <= state.player.energy);
+    const needFtueReaction = Boolean(window.FTUE?.isEnabled() && !window.FTUE?.hasSeen("combatReaction"));
+
+    if (!hasBlockableUnitAttack && !hasPlayableReaction && !needFtueReaction) {
+      if (readyAttackers.some((a) => a.unit.stealth)) {
+        spawnFx("#enemy-hero-panel", "ESCABULLIRSE!", "fx-dmg");
+      }
+      dealDamageToHero("player", incomingDmg);
+      setHint(`${state.enemy.name} infligio ${incomingDmg} de dano directo.`);
+      finishEnemyTurn();
+      return;
+    }
+
+    const leadUnit = readyAttackers[0]?.unit;
+    const leadCard = planned.find((c) => getEnemyCardHeroDmg(c, state.player.board.some(Boolean)) > 0) || planned[0];
+    const enemyCardMeta = {
+      name: leadUnit ? leadUnit.name : (leadCard?.name || intent.cardName || "Asalto Rival"),
+      art: leadUnit ? leadUnit.art : (leadCard?.art || intent.art || state.enemy.avatar),
+      dmg: incomingDmg,
+      canBlockWithUnit: hasBlockableUnitAttack
+    };
+
+    openReactionWindow(enemyCardMeta, (blockerIdx) => {
+      // Resolve ready enemy units
+      readyAttackers.forEach(({ unit, idx }) => {
+        if (unit.hp <= 0 || state.gameOver) return;
+        if (unit.stealth) {
+          spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, "SIGILO!", "fx-dmg");
+          dealDamageToHero("player", unit.atk);
+          return;
+        }
+        const targetIdx =
+          blockerIdx !== null && state.player.board[blockerIdx] && !state.player.board[blockerIdx].stunned
+            ? blockerIdx
+            : state.player.board.findIndex((pu) => pu && pu.guard && !pu.stunned);
+
+        if (targetIdx !== -1) {
+          const pu = state.player.board[targetIdx];
+          pu.hp -= unit.atk;
+          unit.hp -= pu.atk;
+          spawnFx(`#player-slots .unit-slot:nth-child(${targetIdx + 1})`, `-${unit.atk}`, "fx-dmg");
+          spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, `-${pu.atk}`, "fx-dmg");
+          if (unit.pierce && pu.hp < 0) {
+            const excess = Math.abs(pu.hp);
+            dealDamageToHero("player", excess);
+            spawnFx("#player-hero-panel", `PERFORA -${excess}`, "fx-dmg");
+          }
+          if (pu.hp <= 0) triggerUnitDeath("player", targetIdx);
+        } else {
+          dealDamageToHero("player", unit.atk);
+        }
+      });
+
+      state.enemy.board.forEach((u, idx) => {
+        if (u && u.hp <= 0) triggerUnitDeath("enemy", idx);
+      });
+
+      // Resolve enemy spell / direct hero damage
+      if (combatCtx.pendingSpellHeroDmg > 0 && !state.gameOver) {
+        dealDamageToHero("player", combatCtx.pendingSpellHeroDmg);
+      }
+
+      finishEnemyTurn();
+    });
+  }
+
+  function stepNextCard(stepIdx) {
+    if (state.gameOver) return;
+    if (stepIdx >= planned.length) {
+      resolveEnemyCombatPhase();
+      return;
+    }
+    const card = planned[stepIdx];
+    if (!card.syntheticEffect && Array.isArray(state.enemy.hand)) {
+      const hIdx = state.enemy.hand.findIndex((c) => (card.uid && c.uid === card.uid) || c.id === card.id);
+      if (hIdx !== -1) {
+        const played = state.enemy.hand.splice(hIdx, 1)[0];
+        state.enemy.discard.push(played);
+      }
+      state.enemy.handCount = state.enemy.hand.length;
+      state.enemy.deckCount = state.enemy.deck.length;
+    }
+
+    showEnemyActionToast(card, card.shortTag);
+    resolveEnemyCardPlay(card, combatCtx);
+    render();
+
+    setTimeout(() => stepNextCard(stepIdx + 1), 300);
+  }
+
+  stepNextCard(0);
 }
 
 function finishEnemyTurn() {
@@ -2439,8 +3044,14 @@ function finishEnemyTurn() {
   });
 
   state.player.gold = 0;
-  state.player.board.forEach((u) => {
-    if (u) u.ready = true;
+  state.player.board.forEach((u, idx) => {
+    if (!u) return;
+    if (u.stunned) {
+      u.ready = false;
+      spawnFx(`#player-slots .unit-slot:nth-child(${idx + 1})`, "ATURDIDA", "fx-shd");
+    } else {
+      u.ready = true;
+    }
   });
 
   drawCards(5);
@@ -2449,7 +3060,6 @@ function finishEnemyTurn() {
   render();
   startTurnTimer();
   window.FTUE?.onCombatTurnStart(state);
-  window.FTUE?.onCardDrawnOrHandCheck(state);
   if (autoBattleEnabled) setTimeout(runAutoBattleTurn, 380);
 }
 
@@ -2486,18 +3096,23 @@ function render() {
   document.getElementById("enemy-avatar-img").src = state.enemy.avatar;
   document.getElementById("enemy-hp").textContent = `${state.enemy.hp}/${state.enemy.maxHp}`;
   document.getElementById("enemy-armor").textContent = `${state.enemy.armor}`;
-  document.getElementById("enemy-intention").textContent = state.isPvp
+  const enemyIntentionEl = document.getElementById("enemy-intention");
+  enemyIntentionEl.textContent = state.isPvp
     ? (state.isPlayerTurn ? "ESPERANDO TU JUGADA" : "TURNO DEL RIVAL")
     : `INTENCION: ${state.enemy.intention.label}`;
+  enemyIntentionEl.title = state.isPvp ? "" : (state.enemy.intention?.tooltip || "");
   document.getElementById("enemy-deck-count").textContent = `${state.enemy.deckCount}`;
   applyCardBackLayers(
     document.getElementById("enemy-deck-img"),
     document.getElementById("enemy-deck-top-img"),
     state.enemy.cardBack
   );
+  const diffLabel = runState.difficultyId && runState.difficultyId !== "estandar"
+    ? ` [${runState.difficultyId.toUpperCase()}]`
+    : "";
   const floorLabel = runState.mapNav
-    ? `PISO ${Math.max(1, runState.mapNav.currentFloor)} / ${runState.mapNav.map.floorsCount}${runState.currentEncounter?.isElite ? " (ELITE)" : runState.currentEncounter?.isBoss ? " (JEFE)" : ""}`
-    : `COMBATE ${runState.stageIndex + 1} / ${STAGES.length}`;
+    ? `PISO ${Math.max(1, runState.mapNav.currentFloor)} / ${runState.mapNav.map.floorsCount}${runState.currentEncounter?.isElite ? " (ELITE)" : runState.currentEncounter?.isBoss ? " (JEFE)" : ""}${diffLabel}`
+    : `COMBATE ${runState.stageIndex + 1} / ${STAGES.length}${diffLabel}`;
   document.getElementById("stage-indicator").textContent = state.isPvp
     ? "DUELO VS ONLINE"
     : floorLabel;
@@ -2520,7 +3135,9 @@ function render() {
   }
 
   const enemyHeroPanel = document.getElementById("enemy-hero-panel");
-  const enemyHasGuard = state.enemy.board.some((u) => u && u.guard);
+  const selectedAttacker = state.selectedUnitIndex !== null ? state.player.board[state.selectedUnitIndex] : null;
+  const enemyHasGuard = !selectedAttacker?.stealth && state.enemy.board.some((u) => u && u.guard && !u.stunned);
+  enemyHeroPanel.title = state.isPvp ? "" : (state.enemy.passiveLabel ? `PASIVA RIVAL: ${state.enemy.passiveLabel}` : "");
   if (state.selectedUnitIndex !== null && !enemyHasGuard) {
     enemyHeroPanel.classList.add("targetable");
   } else {
@@ -2635,11 +3252,20 @@ function render() {
       token.className = `unit-token enemy-unit ${targetable ? "targetable" : ""} ${unit.stunned ? "stunned" : ""} ${isPvpAttacking ? "pvp-attacking" : ""}`;
       const enemyBadges = [];
       if (unit.guard) enemyBadges.push('<span class="badge-icon" title="GUARDIA"><img src="assets/ui/badge_guard.png" alt="Guardia" /></span>');
+      if (unit.stealth) enemyBadges.push('<span class="badge-icon" title="ESCABULLIRSE"><img src="assets/ui/badge_stealth.png" alt="Escabullirse" /></span>');
+      if (unit.pierce) enemyBadges.push('<span class="badge-icon" title="PERFORAR"><img src="assets/ui/badge_pierce.png" alt="Perforar" /></span>');
+      if (unit.cute) enemyBadges.push('<span class="badge-icon" title="CUTE"><img src="assets/ui/badge_cute.png" alt="Cute" /></span>');
+      if (unit.onDeath) enemyBadges.push('<span class="badge-icon" title="ULTIMO ALIENTO"><img src="assets/ui/badge_ondeath.png" alt="Al morir" /></span>');
+      if (unit.upkeep) enemyBadges.push('<span class="badge-icon" title="MERCENARIO"><img src="assets/ui/badge_upkeep.png" alt="Mercenario" /></span>');
       if (unit.stunned) enemyBadges.push('<span class="side-badge stunned" title="ATURDIDA: No ataca ni protege">ATURDIDA</span>');
+      const enemyEquipsHtml = (unit.equips && unit.equips.length)
+        ? `<div class="unit-equips-row">${unit.equips.map((eq) => `<span class="unit-equip-tag">${eq}</span>`).join("")}</div>`
+        : "";
       token.innerHTML = `
         <span class="unit-token-name">${unit.name}</span>
         ${enemyBadges.length ? `<div class="card-side-badges">${enemyBadges.join("")}</div>` : ""}
         <img class="unit-token-art" src="${unit.art}" alt="${unit.name}" />
+        ${enemyEquipsHtml}
         <div class="unit-pedestal"></div>
         <div class="unit-medallion atk-medallion"><img src="assets/ui/stat_atk.png" alt="ATK" /><span>${unit.atk}</span></div>
         <div class="unit-medallion hp-medallion"><img src="assets/ui/stat_hp.png" alt="HP" /><span>${unit.hp}</span></div>
@@ -2666,12 +3292,14 @@ function render() {
       slot.textContent = "VACIO";
     } else {
       const isSelected = state.selectedUnitIndex === idx;
-      const isBlockerPick = Boolean(state.reactionWindow);
+      const isBlockerPick = Boolean(
+        state.reactionWindow && state.reactionWindow.canBlockWithUnit !== false && !unit.stunned
+      );
       const isEquipPick = Boolean(state.pendingEquip);
       const isCuteTarget = isCuteHealMode && idx !== state.selectedUnitIndex;
       const isChosenBlocker = isBlockerPick && state.reactionWindow.blockerIdx === idx;
       const token = document.createElement("div");
-      token.className = `unit-token ${unit.ready && !isBlockerPick ? "ready" : ""} ${isSelected || isChosenBlocker ? "selected" : ""} ${isBlockerPick ? "blocker-candidate" : ""} ${isEquipPick ? "equip-target" : ""} ${isCuteTarget ? "cute-heal-target" : ""}`;
+      token.className = `unit-token ${unit.ready && !unit.stunned && !isBlockerPick ? "ready" : ""} ${isSelected || isChosenBlocker ? "selected" : ""} ${isBlockerPick ? "blocker-candidate" : ""} ${isEquipPick ? "equip-target" : ""} ${isCuteTarget ? "cute-heal-target" : ""} ${unit.stunned ? "stunned" : ""}`;
       const badges = [];
       if (unit.guard) badges.push('<span class="badge-icon" title="GUARDIA"><img src="assets/ui/badge_guard.png" alt="Guardia" /></span>');
       if (unit.stealth) badges.push('<span class="badge-icon" title="ESCABULLIRSE"><img src="assets/ui/badge_stealth.png" alt="Escabullirse" /></span>');
@@ -2679,8 +3307,9 @@ function render() {
       if (unit.cute) badges.push('<span class="badge-icon" title="CUTE"><img src="assets/ui/badge_cute.png" alt="Cute" /></span>');
       if (unit.onDeath) badges.push('<span class="badge-icon" title="ULTIMO ALIENTO"><img src="assets/ui/badge_ondeath.png" alt="Al morir" /></span>');
       if (unit.upkeep) badges.push('<span class="badge-icon" title="MERCENARIO: 1 EN/Oro por turno"><img src="assets/ui/badge_upkeep.png" alt="Mercenario" /></span>');
+      if (unit.stunned) badges.push('<span class="side-badge stunned" title="ATURDIDA: No ataca ni protege">ATURDIDA</span>');
       if (isChosenBlocker) badges.push('<span class="badge-icon active-block" title="BLOQUEANDO"><img src="assets/ui/badge_guard.png" alt="Bloquea" /></span>');
-      else if (unit.ready && !isBlockerPick) badges.push('<span class="badge-icon" title="LISTA PARA ATACAR"><img src="assets/ui/badge_haste.png" alt="Lista" /></span>');
+      else if (unit.ready && !unit.stunned && !isBlockerPick) badges.push('<span class="badge-icon" title="LISTA PARA ATACAR"><img src="assets/ui/badge_haste.png" alt="Lista" /></span>');
       const equipsHtml = (unit.equips && unit.equips.length)
         ? `<div class="unit-equips-row">${unit.equips.map((eq) => `<span class="unit-equip-tag">${eq}</span>`).join("")}</div>`
         : "";
@@ -2702,12 +3331,13 @@ function render() {
       } else if (isBlockerPick) {
         token.addEventListener("click", () => {
           state.reactionWindow.blockerIdx = idx;
+          window.FTUE?.onReactionResolved();
           if (state.isPvp) {
             window.PvpEngine?.sendAction("REACTION_BLOCK", { blockerIdx: idx });
           }
           render();
         });
-      } else if (unit.ready && state.isPlayerTurn) {
+      } else if (unit.ready && !unit.stunned && state.isPlayerTurn) {
         token.addEventListener("click", () => selectPlayerUnit(idx));
       }
       slot.appendChild(token);
@@ -2996,11 +3626,13 @@ document.getElementById("play-btn")?.addEventListener("click", () => {
   document.getElementById("title-screen")?.classList.add("hidden");
   renderDeckSelector();
   renderCardBackSelector();
+  renderDifficultySelector();
   document.getElementById("deck-select-screen")?.classList.remove("hidden");
   window.FTUE?.onDeckSelectOpen();
 });
 
 document.getElementById("deck-select-back-btn")?.addEventListener("click", () => {
+  window.FTUE?.dismiss();
   document.getElementById("deck-select-screen")?.classList.add("hidden");
   document.getElementById("title-screen")?.classList.remove("hidden");
 });
@@ -3083,6 +3715,7 @@ function openRestScreen(isInitial = false) {
   goldBtn.classList.remove("chosen");
 
   healBtn.onclick = () => {
+    window.FTUE?.dismiss();
     window.SFX?.play("heal_buff");
     runState.playerHp = Math.min(runState.playerMaxHp, runState.playerHp + 12);
     hpVal.textContent = `${runState.playerHp}/${runState.playerMaxHp}`;
@@ -3092,6 +3725,7 @@ function openRestScreen(isInitial = false) {
   };
 
   goldBtn.onclick = () => {
+    window.FTUE?.dismiss();
     window.SFX?.play("gold_coin");
     runState.nextStageBonusGold = 2;
     goldBtn.classList.add("chosen");
@@ -3100,6 +3734,7 @@ function openRestScreen(isInitial = false) {
   };
 
   document.getElementById("rest-continue-btn").onclick = () => {
+    window.FTUE?.dismiss();
     screen.classList.add("hidden");
     if (runState.mapNav) {
       openMapScreen(false);
@@ -3183,6 +3818,7 @@ function renderInventoryModal() {
 }
 
 document.getElementById("rest-bag-btn")?.addEventListener("click", () => {
+  window.FTUE?.dismiss();
   renderInventoryModal();
   document.getElementById("inventory-modal")?.classList.remove("hidden");
 });
@@ -3212,6 +3848,7 @@ document.getElementById("inventory-close-btn")?.addEventListener("click", () => 
 
 renderDeckSelector();
 renderCardBackSelector();
+renderDifficultySelector();
 
 
 // ================= SMART TACTICAL AUTO-BATTLE AI =================
@@ -3227,8 +3864,8 @@ function isCombatActiveForAuto() {
 }
 
 function getIncomingEnemyThreat() {
-  const unitAtk = state.enemy.board.reduce((s, u) => s + (u ? u.atk : 0), 0);
-  const heroAtk = state.enemy.intention?.type === "attack" ? state.enemy.intention.amount : 0;
+  const unitAtk = state.enemy.board.reduce((s, u) => s + (u && !u.stunned ? u.atk : 0), 0);
+  const heroAtk = state.enemy.intention?.amount || 0;
   return unitAtk + heroAtk;
 }
 
@@ -3308,12 +3945,12 @@ function scoreMarketCardForAuto(card) {
 function pickBestAutoAttack() {
   const readyUnits = state.player.board
     .map((u, idx) => ({ u, idx }))
-    .filter((x) => x.u && x.u.ready);
+    .filter((x) => x.u && x.u.ready && !x.u.stunned);
   if (readyUnits.length === 0) return null;
 
   const enemyGuards = state.enemy.board
     .map((u, idx) => ({ u, idx }))
-    .filter((x) => x.u && x.u.guard);
+    .filter((x) => x.u && x.u.guard && !x.u.stunned);
   const enemyAll = state.enemy.board
     .map((u, idx) => ({ u, idx }))
     .filter((x) => x.u);
@@ -3433,17 +4070,19 @@ function handleAutoReaction(incomingDmg, finishFn) {
     }
 
     // Pick a blocker that survives or saves a low-HP hero
-    const candidates = state.player.board
-      .map((u, idx) => ({ u, idx }))
-      .filter((x) => x.u);
-    if (candidates.length > 0) {
-      const guard = candidates.find((x) => x.u.guard);
-      const survivor = candidates.find((x) => x.u.hp > incomingDmg);
-      const sacrifice = state.player.hp <= incomingDmg ? candidates[0] : null;
-      const chosen = guard || survivor || sacrifice;
-      if (chosen && state.reactionWindow) {
-        state.reactionWindow.blockerIdx = chosen.idx;
-        render();
+    if (state.reactionWindow.canBlockWithUnit !== false) {
+      const candidates = state.player.board
+        .map((u, idx) => ({ u, idx }))
+        .filter((x) => x.u && !x.u.stunned);
+      if (candidates.length > 0) {
+        const guard = candidates.find((x) => x.u.guard);
+        const survivor = candidates.find((x) => x.u.hp > incomingDmg);
+        const sacrifice = state.player.hp <= incomingDmg ? candidates[0] : null;
+        const chosen = guard || survivor || sacrifice;
+        if (chosen && state.reactionWindow) {
+          state.reactionWindow.blockerIdx = chosen.idx;
+          render();
+        }
       }
     }
 
@@ -3477,7 +4116,10 @@ function openMapScreen(peekOnly = false) {
   if (!peekOnly) stopTurnTimer();
 
   const floorNum = Math.min(nav.map.floorsCount, Math.max(1, nav.currentFloor + (peekOnly ? 0 : 1)));
-  document.getElementById("map-floor-badge").textContent = `PISO ${floorNum} / ${nav.map.floorsCount}`;
+  const diffSuffix = runState.difficultyId && runState.difficultyId !== "estandar"
+    ? ` [${runState.difficultyId.toUpperCase()}]`
+    : "";
+  document.getElementById("map-floor-badge").textContent = `PISO ${floorNum} / ${nav.map.floorsCount}${diffSuffix}`;
   document.getElementById("map-hp-badge").textContent = `HP: ${runState.playerHp}/${runState.playerMaxHp}`;
   document.getElementById("map-gold-badge").textContent = `ORO RUN: ${runState.runGold || 0}`;
 
@@ -3490,6 +4132,7 @@ function openMapScreen(peekOnly = false) {
   const deckBtn = document.getElementById("map-deck-btn");
   if (deckBtn) {
     deckBtn.onclick = () => {
+      window.FTUE?.dismiss();
       renderInventoryModal();
       document.getElementById("inventory-modal")?.classList.remove("hidden");
     };
@@ -3688,6 +4331,7 @@ function openShopModal() {
     buyBtn.textContent = `COMPRAR (${cost} ORO)`;
     buyBtn.onclick = () => {
       if ((runState.runGold || 0) < cost || item.classList.contains("sold")) return;
+      window.FTUE?.dismiss();
       runState.runGold -= cost;
       window.CollectionSystem?.unlockCard(cid);
       runState.permanentDeck.push(cid);
@@ -3709,6 +4353,7 @@ function openShopModal() {
   });
 
   document.getElementById("shop-leave-btn").onclick = () => {
+    window.FTUE?.dismiss();
     modal.classList.add("hidden");
     openMapScreen(false);
   };
@@ -3745,6 +4390,7 @@ function openEventModal() {
   choicesEl.innerHTML = "";
 
   function finishEvent(msg, outcomeKind = "positive") {
+    window.FTUE?.dismiss();
     choicesEl.querySelectorAll("button").forEach((b) => { b.disabled = true; });
     outcomeEl.textContent = msg;
     outcomeEl.classList.remove("hidden", "outcome-positive", "outcome-negative", "outcome-epic");
@@ -3826,6 +4472,7 @@ function openEventModal() {
   });
 
   contBtn.onclick = () => {
+    window.FTUE?.dismiss();
     modal.classList.add("hidden");
     openMapScreen(false);
   };
@@ -3849,6 +4496,7 @@ let activeCollectionFilter = "todas";
 window.CollectionSystem?.init(CARD_CATALOG, STARTER_DECKS);
 
 function openCollectionScreen(initialTab = "cards") {
+  window.FTUE?.dismiss();
   activeCollectionTab = initialTab;
   activeCollectionFilter = "todas";
   document.getElementById("collection-tabs")?.querySelectorAll(".collection-tab").forEach((btn) => {

@@ -270,9 +270,11 @@
     window.FTUE.onCardDrawnOrHandCheck = noop;
     window.FTUE.checkCombatContextualTips = noop;
     window.FTUE.onMarketBought = noop;
+    window.FTUE.onUnitSelectedForAttack = noop;
     window.FTUE.onUnitAttacked = noop;
     window.FTUE.onTurnEnd = noop;
     window.FTUE.onReactionOpen = noop;
+    window.FTUE.onReactionResolved = noop;
     window.FTUE.onRestOpen = noop;
     window.FTUE.onShopOpen = noop;
     window.FTUE.onEventOpen = noop;
@@ -284,6 +286,7 @@
     #ftue-cheatsheet-modal {
       display: none !important;
     }
+    #ftue-popover,
     #ftue-pointer {
       pointer-events: auto !important;
     }
@@ -426,7 +429,8 @@
         window.state.player.relics[0] = {
           name: "Yunque Eterno",
           art: "assets/cards/forja_yunque_eterno.png",
-          turnsLeft: 3,
+          duration: 3,
+          desc: "+4 SHD y +1/+1 a tu mesa.",
         };
       }
       if (typeof window.render === "function") window.render();
@@ -787,7 +791,7 @@
     } else if (sceneId === "map") {
       ensureEditorRun();
       hideAllOverlays();
-      if (typeof window.openMapScreen === "function") window.openMapScreen(true);
+      if (typeof window.openMapScreen === "function") window.openMapScreen(false);
       document.getElementById("map-screen")?.classList.remove("hidden");
     } else if (sceneId === "duel") {
       ensureEditorRun();
@@ -883,8 +887,21 @@
       }
     }
 
+    let previewCfg = stepConfig;
+    if (previewCfg.key === "mapIntro" && previewCfg.targetAll === undefined) {
+      previewCfg = { ...previewCfg, targetAll: true };
+    } else if (previewCfg.key === "combatReaction") {
+      const hasUnits = document.querySelectorAll("#player-slots .unit-token").length > 0;
+      previewCfg = {
+        ...previewCfg,
+        target: hasUnits ? ["#reaction-banner", "#player-slots .unit-token"] : "#reaction-banner",
+        targetAll: true,
+        pointerTarget: "#reaction-banner",
+      };
+    }
+
     if (window.FTUE && typeof window.FTUE.previewStep === "function") {
-      window.FTUE.previewStep(stepConfig);
+      window.FTUE.previewStep(previewCfg);
       requestAnimationFrame(() => {
         applySceneLayout(window.SCENE_LAYOUT);
         updateGizmo();
