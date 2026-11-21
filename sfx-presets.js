@@ -198,5 +198,58 @@ window.SFX_PRESETS = [
     layers: [
       { type: "triangle", delayMs: 0, freqStart: 980, freqEnd: 420, durationMs: 45, filterType: "bandpass", filterFreq: 1600, volume: 0.22 }
     ]
+  },
+  {
+    id: "spray_shake",
+    name: "Agitar Lata de Aerosol",
+    category: "Spray Casters",
+    pitchJitter: 0.07,
+    layers: [
+      { type: "triangle", delayMs: 0, freqStart: 1650, freqEnd: 1250, durationMs: 32, filterType: "bandpass", filterFreq: 2200, volume: 0.26 },
+      { type: "noise", delayMs: 12, freqStart: 3200, freqEnd: 4600, durationMs: 40, filterType: "highpass", filterFreq: 2600, volume: 0.16 },
+      { type: "triangle", delayMs: 85, freqStart: 1850, freqEnd: 1400, durationMs: 34, filterType: "bandpass", filterFreq: 2400, volume: 0.28 }
+    ]
+  },
+  {
+    id: "spray_burst",
+    name: "Rociada de Spray Presurizado",
+    category: "Spray Casters",
+    pitchJitter: 0.05,
+    layers: [
+      { type: "noise", delayMs: 0, freqStart: 4200, freqEnd: 2600, durationMs: 220, filterType: "bandpass", filterFreq: 3400, volume: 0.34 },
+      { type: "sine", delayMs: 0, freqStart: 140, freqEnd: 75, durationMs: 90, filterType: "lowpass", filterFreq: 420, volume: 0.22 }
+    ]
+  },
+  {
+    id: "dubstep_drop_hit",
+    name: "Impacto Dubstep (Wobble Drop)",
+    category: "Spray Casters",
+    pitchJitter: 0.03,
+    layers: [
+      { type: "sawtooth", delayMs: 0, freqStart: 110, freqEnd: 42, durationMs: 260, filterType: "lowpass", filterFreq: 480, volume: 0.44 },
+      { type: "square", delayMs: 15, freqStart: 220, freqEnd: 55, durationMs: 180, filterType: "bandpass", filterFreq: 760, volume: 0.28 },
+      { type: "noise", delayMs: 0, freqStart: 3600, freqEnd: 450, durationMs: 110, filterType: "highpass", filterFreq: 1200, volume: 0.25 }
+    ]
+  },
+  {
+    id: "paint_capture",
+    name: "Conquista de Casilla (Pintura)",
+    category: "Spray Casters",
+    pitchJitter: 0.04,
+    layers: [
+      { type: "noise", delayMs: 0, freqStart: 2800, freqEnd: 1400, durationMs: 120, filterType: "bandpass", filterFreq: 2100, volume: 0.24 },
+      { type: "sine", delayMs: 35, freqStart: 392, freqEnd: 587.33, durationMs: 160, filterType: "lowpass", filterFreq: 3200, volume: 0.26 },
+      { type: "sine", delayMs: 95, freqStart: 783.99, freqEnd: 1046.5, durationMs: 190, filterType: "lowpass", filterFreq: 4200, volume: 0.22 }
+    ]
+  },
+  {
+    id: "order_cleanse_beam",
+    name: "Chorro Quimico de El Orden",
+    category: "Spray Casters",
+    pitchJitter: 0.02,
+    layers: [
+      { type: "square", delayMs: 0, freqStart: 880, freqEnd: 440, durationMs: 150, filterType: "bandpass", filterFreq: 1400, volume: 0.22 },
+      { type: "noise", delayMs: 10, freqStart: 3800, freqEnd: 1900, durationMs: 190, filterType: "highpass", filterFreq: 2000, volume: 0.28 }
+    ]
   }
 ];

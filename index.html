@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Duelforge - Roguelike Card Duel</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23ff3b5c'/><text x='16' y='22' font-size='18' font-weight='900' text-anchor='middle' fill='%23ffd23f' font-family='sans-serif'>D</text></svg>" />
+  <title>SPRAY CASTERS - The City is Your Canvas</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23111827'/><circle cx='16' cy='16' r='10' fill='%2300e5ff'/><circle cx='16' cy='16' r='5' fill='%23ff2a85'/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Cinzel:wght@700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=pvp5" />
+  <link rel="stylesheet" href="style.css?v=sc7" />
 </head>
 <body>
   <!-- Title / Landing Screen -->
   <div id="title-screen" class="title-screen">
     <canvas id="title-particles" class="title-particles"></canvas>
     <div class="title-content">
-      <img src="assets/ui/game_logo.png" alt="Duelforge" class="title-logo" />
-      <p class="title-tagline">DUELOS ROGUELIKE 1v1 - FORJA TU MAZO EN VIVO</p>
+      <img src="assets/spraycasters/ui/logo_spraycasters.png" alt="Spray Casters" class="title-logo" />
+      <p class="title-tagline">THE CITY IS YOUR CANVAS - MAGIC IS YOUR AMMO</p>
       <div class="title-actions">
         <button id="play-btn" class="play-hero-btn" type="button">SOLO</button>
         <button id="play-vs-btn" class="play-hero-btn play-hero-btn--vs" type="button">MULTIPLAYER ONLINE</button>
@@ -100,29 +100,34 @@
 
         <div class="enemy-hand-zone">
           <div class="enemy-hand" id="enemy-hand"></div>
-          <div class="enemy-deck-pile" title="Mazo Rival">
-            <div class="card-back-2layer">
-              <img id="enemy-deck-img" class="card-back-base" src="assets/ui/card_back_enemy.png" alt="Mazo Rival" />
-              <img id="enemy-deck-top-img" class="card-back-top" src="" alt="" style="display:none" />
-            </div>
-            <span class="pile-count-badge" id="enemy-deck-count">10</span>
-          </div>
         </div>
 
-        <div class="stage-compact-box">
-          <span id="stage-indicator">COMBATE 1 / 3</span>
-          <span id="turn-indicator">TURNO 1 - TU TURNO</span>
-          <div id="turn-timer-box" class="turn-timer-box">
-            <div class="turn-timer-track">
-              <div id="turn-timer-fill" class="turn-timer-fill"></div>
+        <div class="top-right-meta">
+          <div class="stage-compact-box">
+            <span id="stage-indicator">COMBATE 1 / 3</span>
+            <span id="turn-indicator">TURNO 1 - TU TURNO</span>
+            <div id="turn-timer-box" class="turn-timer-box">
+              <div class="turn-timer-track">
+                <div id="turn-timer-fill" class="turn-timer-fill"></div>
+              </div>
+              <span id="turn-timer-text" class="turn-timer-text">35s</span>
             </div>
-            <span id="turn-timer-text" class="turn-timer-text">35s</span>
           </div>
-          <div class="stage-mini-actions">
-            <button id="open-map-btn" class="sfx-mute-btn" type="button" title="Ver mapa de ruta">MAPA</button>
-            <button id="sfx-mute-btn" class="sfx-mute-btn" type="button" title="Activar o silenciar efectos de sonido">SFX: ON</button>
-            <button id="auto-battle-btn" class="auto-battle-btn" type="button" title="Activar IA tactica automatica en combate">AUTO: OFF</button>
-            <button id="ftue-help-btn" class="sfx-mute-btn ftue-help-btn" type="button" title="Guia rapida de reglas">?</button>
+
+          <div class="piles-right-group enemy-piles-right">
+            <div class="enemy-deck-pile" id="enemy-deck-pile" title="Mazo Rival">
+              <div class="card-back-2layer">
+                <img id="enemy-deck-img" class="card-back-base" src="assets/ui/card_back_enemy.png" alt="Mazo Rival" />
+                <img id="enemy-deck-top-img" class="card-back-top" src="" alt="" style="display:none" />
+              </div>
+              <span class="pile-count-badge" id="enemy-deck-count">10</span>
+              <span class="pile-label">MAZO</span>
+            </div>
+            <div class="enemy-deck-pile enemy-discard-pile" id="enemy-discard-pile" title="Descarte Rival">
+              <div class="discard-preview" id="enemy-discard-preview">VACIO</div>
+              <span class="pile-count-badge" id="enemy-discard-count">0</span>
+              <span class="pile-label">DESC.</span>
+            </div>
           </div>
         </div>
       </header>
@@ -161,6 +166,17 @@
       <!-- Bottom HUD: Player Hero + Deck Pile + Hand + Discard Pile + End Turn -->
       <footer class="bottom-bar">
         <div class="player-controls">
+          <div class="player-top-resources">
+            <div class="relics-zone" id="player-relics" title="Zona de Reliquias (max 2)"></div>
+
+            <div class="energy-bar-box" id="energy-bar-box">
+              <img class="pressure-nozzle-icon" src="assets/spraycasters/ui/icon_spray_nozzle.png" alt="Presion" />
+              <span class="energy-label">PRESION</span>
+              <div class="energy-orbs" id="energy-orbs"></div>
+              <span class="energy-num" id="player-energy">3/3</span>
+            </div>
+          </div>
+
           <div class="hero-panel player-hero" id="player-hero-panel">
             <div class="hero-avatar player-avatar" id="player-avatar-btn" title="Clic para cambiar marco">
               <img src="assets/heroes/player_hero.png" alt="Duelista" />
@@ -190,45 +206,47 @@
               <div id="player-passive-pill" class="hero-passive-pill" title="">PASIVA: --</div>
             </div>
           </div>
-
-          <div class="energy-bar-box" id="energy-bar-box">
-            <span class="energy-label">ENERGIA</span>
-            <div class="energy-orbs" id="energy-orbs"></div>
-            <span class="energy-num" id="player-energy">3/3</span>
-          </div>
-
-          <div class="relics-zone" id="player-relics" title="Zona de Reliquias (max 2)"></div>
         </div>
 
         <div class="hand-stage">
-          <!-- Physical Deck Pile -->
-          <div class="table-pile deck-pile" id="player-deck-pile" title="Tu Mazo">
-            <div class="card-back-2layer">
-              <img id="player-deck-img" class="card-back-base" src="assets/card_backs/back_forja.png" alt="Mazo" />
-              <img id="player-deck-top-img" class="card-back-top" src="assets/card_backs/back_forja_top.png" alt="" />
-            </div>
-            <span class="pile-count-badge" id="deck-count">10</span>
-            <span class="pile-label">MAZO</span>
-          </div>
-
           <div class="hand-container" id="player-hand"></div>
-
-          <!-- Physical Discard Pile -->
-          <div class="table-pile discard-pile" id="player-discard-pile" title="Descarte">
-            <div class="discard-preview" id="discard-preview">VACIO</div>
-            <span class="pile-count-badge" id="discard-count">0</span>
-            <span class="pile-label">DESCARTE</span>
-          </div>
         </div>
 
         <div class="turn-actions">
           <button id="end-turn-btn" class="btn-game">FIN DE TURNO</button>
+
+          <div class="piles-right-group player-piles-right">
+            <!-- Physical Deck Pile -->
+            <div class="table-pile deck-pile" id="player-deck-pile" title="Tu Mazo">
+              <div class="card-back-2layer">
+                <img id="player-deck-img" class="card-back-base" src="assets/card_backs/back_bombers.png" alt="Mazo" />
+                <img id="player-deck-top-img" class="card-back-top" src="assets/card_backs/back_bombers_top.png" alt="" />
+              </div>
+              <span class="pile-count-badge" id="deck-count">10</span>
+              <span class="pile-label">MAZO</span>
+            </div>
+
+            <!-- Physical Discard Pile -->
+            <div class="table-pile discard-pile" id="player-discard-pile" title="Descarte">
+              <div class="discard-preview" id="discard-preview">VACIO</div>
+              <span class="pile-count-badge" id="discard-count">0</span>
+              <span class="pile-label">DESCARTE</span>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
 
-    <!-- Right Column: Live Market Sidebar -->
+    <!-- Right Column: Utility Bar + Compact Live Market Sidebar -->
     <aside class="market-sidebar" aria-label="Mercado Vivo">
+      <div class="market-top-utility-bar">
+        <button id="open-map-btn" class="sfx-mute-btn" type="button" title="Ver mapa de ruta">MAPA</button>
+        <button id="sfx-mute-btn" class="sfx-mute-btn" type="button" title="Activar o silenciar efectos de sonido">SFX: ON</button>
+        <button id="auto-battle-btn" class="auto-battle-btn" type="button" title="Activar IA tactica automatica en combate">AUTO: OFF</button>
+        <button id="ftue-help-btn" class="sfx-mute-btn ftue-help-btn" type="button" title="Guia rapida de reglas">?</button>
+        <button id="exit-run-btn" class="sfx-mute-btn exit-run-btn" type="button" title="Salir al menu principal">SALIR</button>
+      </div>
+
       <div class="market-header">
         <span class="market-title">MERCADO VIVO</span>
         <div class="market-gold-badge" id="player-gold">
@@ -237,20 +255,8 @@
         </div>
       </div>
       <div class="market-subrow">
-        <span class="market-subtitle">Temporales -> Directo a tu mano</span>
+        <span class="market-subtitle">Temporales -> Mano</span>
         <span class="market-deck-count" id="market-count">Mazo: 19</span>
-      </div>
-
-      <div class="market-controls">
-        <div class="filter-pills" id="market-filters">
-          <button class="filter-btn active" data-filter="Todos">Todos</button>
-          <button class="filter-btn" data-filter="Unidad">Unidad</button>
-          <button class="filter-btn" data-filter="Hechizo">Hechizo</button>
-          <button class="filter-btn" data-filter="Tactica">Tactica</button>
-          <button class="filter-btn" data-filter="Reliquia">Reliquia</button>
-          <button class="filter-btn" data-filter="Equipo">Equipo</button>
-        </div>
-        <button class="sort-btn" id="market-sort-btn">Orden: Normal</button>
       </div>
 
       <div class="market-column" id="market-row"></div>
@@ -307,46 +313,45 @@
     </div>
   </div>
 
-  <!-- Dungeon Rest Screen (Between Stages) -->
+  <!-- Rooftop Hideout Rest Screen (Between Districts) -->
   <div id="rest-screen" class="rest-screen hidden">
     <canvas id="rest-sparks" class="rest-sparks"></canvas>
     <div class="rest-hud-top">
-      <div class="rest-title-badge">CAMARA DE DESCANSO</div>
+      <div class="rest-title-badge">ESCONDITE EN LA AZOTEA</div>
       <div class="rest-hp-badge">HP ACTUAL: <span id="rest-hp-val">30/30</span></div>
     </div>
 
-    <!-- Choices Floating Above Campfire -->
+    <!-- Choices Floating Above Burn Barrel -->
     <div class="rest-fire-choices" id="rest-fire-choices">
       <button id="rest-heal-btn" class="rest-choice-btn heal-choice">
         <span class="rest-choice-title">DESCANSAR</span>
         <span class="rest-choice-sub">Recupera +12 HP</span>
       </button>
       <button id="rest-gold-btn" class="rest-choice-btn gold-choice">
-        <span class="rest-choice-title">AVIVAR BRASAS</span>
+        <span class="rest-choice-title">MEZCLAR PINTURA</span>
         <span class="rest-choice-sub">Empieza con +2 ORO</span>
       </button>
     </div>
 
-    <!-- Layered Characters & Props -->
-    <div class="rest-bag-wrap" id="rest-bag-btn" title="Abrir Inventario y Mazo">
-      <img src="assets/ui/rest_bag.png" alt="Inventario" />
-      <span class="rest-prop-label">INVENTARIO</span>
+    <!-- Layered Urban Props -->
+    <div class="rest-bag-wrap" id="rest-bag-btn" title="Abrir Mochila y Mazo">
+      <img src="assets/spraycasters/ui/rest_spray_bag.png" alt="Mochila" />
+      <span class="rest-prop-label">MOCHILA</span>
     </div>
 
     <div class="rest-hero-wrap">
-      <img src="assets/ui/rest_hero_hooded.png" alt="Heroe" />
+      <img id="rest-hero-img" src="assets/spraycasters/heroes/hero_bombers.png" alt="Heroe" />
     </div>
 
     <div class="rest-fire-wrap">
       <div class="rest-fire-glow"></div>
-      <img class="rest-logs-img" src="assets/ui/rest_logs.png" alt="Troncos" />
-      <img class="rest-flames-img" src="assets/ui/rest_flames.png" alt="Llamas" />
+      <img class="rest-barrel-img" src="assets/spraycasters/ui/rest_barrel_fire.png" alt="Barril Urbano" />
     </div>
 
     <!-- Door Continue Button on the Right -->
     <button id="rest-continue-btn" class="rest-door-btn">
       <span>CONTINUAR</span>
-      <small id="rest-next-stage">SIGUIENTE: COMBATE 2</small>
+      <small id="rest-next-stage">SIGUIENTE: DISTRITO 2</small>
     </button>
   </div>
 
@@ -431,11 +436,11 @@
     </div>
   </div>
 
-  <!-- Procedural Map Screen (Slay the Spire Style) -->
+  <!-- Procedural District Map Screen -->
   <div id="map-screen" class="map-screen hidden">
     <div class="map-topbar">
       <div class="map-topbar-left">
-        <div class="map-title-badge">RUTA DEL CALABOZO</div>
+        <div class="map-title-badge">MAPA DE DISTRITOS</div>
         <span id="map-floor-badge" class="map-stat-pill">PISO 1 / 11</span>
         <span id="map-hp-badge" class="map-stat-pill">HP: 30/30</span>
         <span id="map-gold-badge" class="map-stat-pill map-gold-pill">ORO RUN: 35</span>
@@ -464,14 +469,14 @@
     </div>
   </div>
 
-  <!-- Shop Modal -->
+  <!-- Urban Black Market Shop Modal -->
   <div id="shop-modal" class="modal hidden">
     <div class="modal-card shop-modal-card">
       <div class="inventory-header shop-header">
         <div class="shop-header-left">
-          <img class="shop-keeper-avatar" src="assets/ui/merchant_keeper.png" alt="Mercader" />
+          <img class="shop-keeper-avatar" src="assets/spraycasters/ui/urban_merchant.png" alt="Broker" />
           <div>
-            <h2>TIENDA DEL MERCADER</h2>
+            <h2>MERCADO NEGRO CALLEJERO</h2>
             <p class="inventory-sub">Compra cartas permanentes o mejoras usando tu Oro de Run.</p>
           </div>
         </div>
@@ -486,12 +491,12 @@
     </div>
   </div>
 
-  <!-- Event (?) Modal -->
+  <!-- Urban Street Event (?) Modal -->
   <div id="event-modal" class="modal hidden">
     <div class="modal-card event-modal-card">
-      <div class="event-badge">EVENTO MISTERIOSO</div>
+      <div class="event-badge">ENCUENTRO CALLEJERO</div>
       <div class="event-art-wrap">
-        <img id="event-art-img" src="assets/ui/events/event_cofre_trampeado.png" alt="Evento" />
+        <img id="event-art-img" src="assets/spraycasters/ui/event_urban_mystery.png" alt="Evento" />
       </div>
       <h2 id="event-title">EVENTO</h2>
       <p id="event-desc" class="event-desc"></p>
@@ -590,13 +595,15 @@
   <script src="sfx-presets.js"></script>
   <script src="sfx-engine.js"></script>
   <script src="vfx-engine.js?v=1"></script>
-  <script src="cards_data.js"></script>
-  <script src="collection_system.js?v=map10"></script>
-  <script src="map_system.js?v=map10"></script>
+  <script src="spray-vfx.js"></script>
+  <script src="cards_data.js?v=sc7"></script>
+  <script src="spray-booster.js?v=sc4"></script>
+  <script src="collection_system.js?v=sc4"></script>
+  <script src="map_system.js?v=sc4"></script>
   <script src="ftue.js?v=2"></script>
   <script src="pvp-net.js?v=pvp3"></script>
-  <script src="game.js?v=pvp5"></script>
-  <script src="pvp-engine.js?v=pvp3"></script>
+  <script src="game.js?v=sc7"></script>
+  <script src="pvp-engine.js?v=sc4"></script>
   <script src="scene-layout.js"></script>
   <script src="scene-layout-runtime.js"></script>
 </body>

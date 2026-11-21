@@ -583,6 +583,55 @@ function buildEffectFromData(effects = {}) {
       spawnVfxShape("#enemy-hero-panel", "vfx-slash");
       dealDamageToHero("enemy", effects.damageHero);
     }
+    if (effects.damageEnemyHero) {
+      spawnVfxShape("#enemy-hero-panel", "vfx-slash");
+      dealDamageToHero("enemy", effects.damageEnemyHero);
+    }
+    if (effects.damageAllUnitsOnly) {
+      const dmg = effects.damageAllUnitsOnly;
+      state.enemy.board.forEach((u, idx) => {
+        if (!u) return;
+        u.hp -= dmg;
+        const sel = `#enemy-slots .unit-slot:nth-child(${idx + 1})`;
+        spawnVfxShape(sel, "vfx-slash");
+        spawnFx(sel, `-${dmg}`, "fx-dmg");
+        if (u.hp <= 0) triggerUnitDeath("enemy", idx);
+      });
+    }
+    if (effects.poisonEnemy) {
+      state.enemy.poison = (state.enemy.poison || 0) + effects.poisonEnemy;
+      spawnFx("#enemy-hero-panel", `+${effects.poisonEnemy} VENENO`, "fx-heal");
+    }
+    if (effects.discardEnemy) {
+      let removed = 0;
+      for (let i = 0; i < effects.discardEnemy; i++) {
+        if (state.enemy.intention?.plannedCards?.length) {
+          const popped = state.enemy.intention.plannedCards.pop();
+          state.enemy.discard.push(popped);
+          removed++;
+        } else if (state.enemy.hand?.length) {
+          const popped = state.enemy.hand.pop();
+          state.enemy.discard.push(popped);
+          removed++;
+        }
+      }
+      state.enemy.handCount = state.enemy.hand.length;
+      if (removed > 0) {
+        if (state.enemy.intention) {
+          state.enemy.intention.label = (state.enemy.intention.plannedCards || []).map((c) => c.name).join(" + ") || "Saboteado";
+        }
+        spawnFx("#enemy-hand", `SABOTAJE -${removed}`, "fx-shd");
+      }
+    }
+    if (effects.lockEnemySlot) {
+      state.enemy.lockedSlots = state.enemy.lockedSlots || [0, 0, 0];
+      const emptyIdx = state.enemy.board.findIndex((u, i) => u === null && state.enemy.lockedSlots[i] <= 0);
+      const targetSlot = emptyIdx !== -1 ? emptyIdx : state.enemy.lockedSlots.findIndex((t) => t <= 0);
+      if (targetSlot !== -1) {
+        state.enemy.lockedSlots[targetSlot] = Math.max(state.enemy.lockedSlots[targetSlot], effects.lockEnemySlot);
+        spawnFx(`#enemy-slots .unit-slot:nth-child(${targetSlot + 1})`, `BLOQUEADA ${effects.lockEnemySlot}T`, "fx-shd");
+      }
+    }
     if (effects.draw) {
       drawCards(effects.draw);
     }
@@ -602,7 +651,22 @@ if (Array.isArray(window.CUSTOM_CARDS)) {
   });
 }
 
+// Keep only Spray Casters faction cards in live market & boosters (hide legacy medieval cards)
+const SPRAY_ACTIVE_FACTIONS = new Set(["bombers", "weavers", "vanguard", "rollers", "acids", "sugar_riot"]);
+for (let i = MARKET_POOL_IDS.length - 1; i >= 0; i--) {
+  const c = CARD_CATALOG[MARKET_POOL_IDS[i]];
+  if (!c || !SPRAY_ACTIVE_FACTIONS.has(c.faction)) {
+    MARKET_POOL_IDS.splice(i, 1);
+  }
+}
+
 const FACTIONS = {
+  bombers: { id: "bombers", name: "Los Bombers", tag: "Fuego / Pintura Fresca", desc: "Parkour, goblins piromanos, dano directo y ataque explosivo.", deckArt: "assets/spraycasters/sprays/spray_bombers.png" },
+  weavers: { id: "weavers", name: "Los Tejedores", tag: "Control / Runas Cyber", desc: "Elfos techwear, hackeo arcano, desvio, robo y contrahechizos.", deckArt: "assets/spraycasters/sprays/spray_weavers.png" },
+  vanguard: { id: "vanguard", name: "Vanguardia Stencil", tag: "Blindaje / Guardia", desc: "Robots reprogramados, veteranos de barrio, escudos y plantillas.", deckArt: "assets/spraycasters/sprays/spray_vanguard.png" },
+  rollers: { id: "rollers", name: "Los Rollers", tag: "Fuerza / Conquista", desc: "Goblins ricachones con cadenas de oro y rodillos con Perforar.", deckArt: "assets/spraycasters/sprays/spray_rollers.png" },
+  acids: { id: "acids", name: "Los Acidos", tag: "Corrosion / Subsuelo", desc: "Goblins con mascaras de gas, mutantes de tunel y grabado acido.", deckArt: "assets/spraycasters/sprays/spray_acids.png" },
+  sugar_riot: { id: "sugar_riot", name: "The Sugar Riot", tag: "Destellos / Rebotes", desc: "Elfas patinadoras, pandas punk, androides pop y aturdimiento.", deckArt: "assets/spraycasters/sprays/spray_sugar_riot.png" },
   forja: { id: "forja", name: "Forja de Hierro", tag: "Tanque / Equipos", desc: "Guardia, Armadura, Perforar y Equipos pesados." },
   arcano: { id: "arcano", name: "Orden Arcana", tag: "Control / Magia", desc: "Hechizos, Aturdir, Robo de cartas y Reliquias." },
   sindicato: { id: "sindicato", name: "Sindicato del Oro", tag: "Economia / Mercado", desc: "Oro extra, descuentos de Mercado y Efimeras." },
@@ -613,6 +677,12 @@ const FACTIONS = {
 };
 
 const FACTION_HEROES = {
+  bombers: { id: "blaze", name: "Blaze, Rey del Throw-up", hp: 30, art: "assets/spraycasters/heroes/hero_bombers.png", frame: "assets/ui/portrait_frame_obsidian.png", passive: "Pintar casillas otorga +1 ATK y dano explosivo" },
+  weavers: { id: "nyx", name: "Nyx, Tejedora de Neón", hp: 31, art: "assets/spraycasters/heroes/hero_weavers.png", frame: "assets/ui/portrait_frame_crystal.png", passive: "Hackeas +1 carta extra al iniciar el combate" },
+  vanguard: { id: "bunker", name: "Bunker, Capataz Stencil", hp: 32, art: "assets/spraycasters/heroes/hero_vanguard.png", frame: "assets/ui/portrait_frame_iron.png", passive: "+1 SHD endurecido al inicio de cada turno" },
+  rollers: { id: "krom", name: "Krom, Jefe Blockbuster", hp: 31, art: "assets/spraycasters/heroes/hero_rollers.png", frame: "assets/ui/portrait_frame_gold.png", passive: "Tus unidades pesadas aplastan con Perforar" },
+  acids: { id: "mox", name: "Mox, Alquimista del Metro", hp: 30, art: "assets/spraycasters/heroes/hero_acids.png", frame: "assets/ui/portrait_frame_obsidian.png", passive: "Curas +2 HP cuando muere una unidad tuya" },
+  sugar_riot: { id: "kandi", name: "Kandi, Reina Sticker-Bomb", hp: 29, art: "assets/spraycasters/heroes/hero_sugar_riot.png", frame: "assets/ui/portrait_frame_crystal.png", passive: "Destellos neon y curacion tactica Cute" },
   forja: { id: "kaelen", name: "Kaelen, Senor del Yunque", hp: 30, frame: "assets/ui/portrait_frame_iron.png", passive: "+1 SHD al inicio de cada turno" },
   arcano: { id: "lyra", name: "Lyra, Archimaga Astral", hp: 31, frame: "assets/ui/portrait_frame_crystal.png", passive: "Robas +1 carta extra en turno 1" },
   sindicato: { id: "vex", name: "Vex, Baron del Mercado", hp: 30, frame: "assets/ui/portrait_frame_gold.png", passive: "Empiezas cada combate con +2 Oro" },
@@ -623,6 +693,18 @@ const FACTION_HEROES = {
 
 function formatHeroPassiveHtml(factionId) {
   switch (factionId) {
+    case "bombers":
+      return `<span>Casillas pintadas dan +1</span><img class="deck-passive-ic" src="assets/ui/stat_atk.png" alt="ATK" /><span>y Pintura Fresca</span>`;
+    case "weavers":
+      return `<span>Robas +1</span><img class="deck-passive-ic" src="assets/ui/icon_draw.png" alt="Carta" /><span>extra en turno 1</span>`;
+    case "vanguard":
+      return `<span>+1</span><img class="deck-passive-ic" src="assets/ui/stat_shd.png" alt="SHD" /><span>endurecido cada turno</span>`;
+    case "rollers":
+      return `<span>Unidades pesadas con</span><img class="deck-passive-ic" src="assets/ui/badge_pierce.png" alt="Perforar" /><span>y barrido</span>`;
+    case "acids":
+      return `<span>Al morir aliado curas +2</span><img class="deck-passive-ic" src="assets/ui/stat_hp.png" alt="HP" />`;
+    case "sugar_riot":
+      return `<span>Unidades</span><img class="deck-passive-ic" src="assets/ui/badge_cute.png" alt="Cute" /><span>con destellos y prisa</span>`;
     case "forja":
       return `<span>+1</span><img class="deck-passive-ic" src="assets/ui/stat_shd.png" alt="SHD" /><span>al inicio de cada turno</span>`;
     case "pastel":
@@ -656,42 +738,77 @@ Object.keys(CARD_CATALOG).forEach((id) => {
 });
 
 const STARTER_DECKS = {
-  forja: {
-    id: "forja",
-    name: "Forja de Hierro",
-    archetype: "Tanque y Equipos",
-    cards: ["escudo", "escudo", "escudo", "escudo", "escudero", "escudero", "golpe", "golpe", "ariete", "moneda"]
+  bombers: {
+    id: "bombers",
+    name: "Los Bombers",
+    archetype: "Pintura Fresca y Fuego",
+    cards: [
+      "bombers_parkour_runner", "bombers_parkour_runner",
+      "bombers_goblin_pyro", "bombers_goblin_pyro",
+      "bombers_flame_elemental", "bombers_blaze_kicks",
+      "bombers_torch_nozzle", "bombers_detonator_boombox",
+      "bombers_bubble_fireball", "bombers_crossfire_burst"
+    ]
   },
-  arcano: {
-    id: "arcano",
-    name: "Orden Arcana",
-    archetype: "Control y Robo",
-    cards: ["golpe", "golpe", "descarga", "descarga", "rayo", "hielo", "escudo", "escudo", "moneda", "moneda"]
+  weavers: {
+    id: "weavers",
+    name: "Los Tejedores",
+    archetype: "Control y Runas Cyber",
+    cards: [
+      "weavers_cyber_oracle", "weavers_cyber_oracle",
+      "weavers_arcane_hacker", "weavers_cyber_spirit",
+      "weavers_data_blade", "weavers_stylus_gauntlet",
+      "weavers_memory_crystal", "weavers_redirect_portal",
+      "weavers_circuit_draw", "weavers_counter_prism"
+    ]
   },
-  sindicato: {
-    id: "sindicato",
-    name: "Sindicato del Oro",
-    archetype: "Economia y Mercado",
-    cards: ["moneda", "moneda", "mercenario", "mercenario", "saqueador", "saqueador", "golpe", "golpe", "relampago", "escudo"]
+  vanguard: {
+    id: "vanguard",
+    name: "Vanguardia Stencil",
+    archetype: "Blindaje y Guardia",
+    cards: [
+      "vanguard_mech_hound", "vanguard_mech_hound",
+      "vanguard_bulldog_vet", "vanguard_bulldog_vet",
+      "vanguard_beetle_knight", "vanguard_sign_shield",
+      "vanguard_press_launcher", "vanguard_stencil_station",
+      "vanguard_hardpaint_wall", "vanguard_reinforce_drop"
+    ]
   },
-  legion: {
-    id: "legion",
-    name: "Legion Ignea",
-    archetype: "Aggro y Prisa",
-    cards: ["golpe", "golpe", "golpe", "goblin", "goblin", "legion_lancero", "furia", "escudo", "escudo", "moneda"]
+  rollers: {
+    id: "rollers",
+    name: "Los Rollers",
+    archetype: "Fuerza y Conquista",
+    cards: [
+      "rollers_orc_heavy", "rollers_orc_heavy",
+      "rollers_concrete_troll", "rollers_concrete_troll",
+      "rollers_rhino_bruiser", "rollers_telescopic_roller",
+      "rollers_paint_drum", "rollers_facade_compressor",
+      "rollers_monumental_sweep", "rollers_wall_conquest"
+    ]
   },
-  culto: {
-    id: "culto",
-    name: "Culto Sombrio",
-    archetype: "Drenaje y Sacrificio",
-    cards: ["golpe", "golpe", "golpe", "drenaje", "mercenario", "mercenario", "saqueador", "escudo", "escudo", "moneda"]
+  acids: {
+    id: "acids",
+    name: "Los Acidos",
+    archetype: "Corrosion y Subsuelo",
+    cards: [
+      "acids_gas_goblin", "acids_gas_goblin",
+      "acids_slime_lurker", "acids_slime_lurker",
+      "acids_ink_wraith", "acids_etch_mop",
+      "acids_gas_mask", "acids_alchemy_drum",
+      "acids_corrosive_splash", "acids_pasteup_revive"
+    ]
   },
-  pastel: {
-    id: "pastel",
-    name: "Reino Pastel",
-    archetype: "Cute y Curacion",
-    secret: true,
-    cards: ["pastel_hada_azucar", "pastel_hada_azucar", "pastel_caballero_caramelo", "pastel_caballero_caramelo", "pastel_unicornio", "escudo", "escudo", "golpe", "golpe", "moneda"]
+  sugar_riot: {
+    id: "sugar_riot",
+    name: "The Sugar Riot",
+    archetype: "Destellos y Rebotes",
+    cards: [
+      "sugar_skate_elf", "sugar_skate_elf",
+      "sugar_panda_punk", "sugar_panda_punk",
+      "sugar_pop_android", "sugar_neon_skates",
+      "sugar_sticker_blaster", "sugar_boombox_pop",
+      "sugar_dazzle_flash", "sugar_bounce_spring"
+    ]
   }
 };
 
@@ -714,7 +831,7 @@ function unlockPastelFaction(silent = false) {
   }
 }
 
-let selectedStarterDeckId = "forja";
+let selectedStarterDeckId = "bombers";
 let selectedCardBackId = "auto";
 const DIFFICULTY_STORAGE_KEY = "duelforge_difficulty_v1";
 let selectedDifficultyId = (() => {
@@ -768,15 +885,15 @@ function renderDifficultySelector() {
 
 const PLAYER_CARD_BACKS = [
   { id: "auto", label: "Auto", src: null },
-  { id: "forja", label: "Forja", src: "assets/card_backs/back_forja.png" },
-  { id: "arcano", label: "Arcano", src: "assets/card_backs/back_arcano.png" },
-  { id: "sindicato", label: "Oro", src: "assets/card_backs/back_sindicato.png" },
-  { id: "legion", label: "Ignea", src: "assets/card_backs/back_legion.png" },
-  { id: "culto", label: "Culto", src: "assets/card_backs/back_culto.png" },
-  { id: "alt_plateado", label: "Plata", src: "assets/card_backs/back_alt_plateado.png" },
-  { id: "alt_dorado", label: "Imperial", src: "assets/card_backs/back_alt_dorado.png" },
-  { id: "alt_neoforja", label: "Neoforja", src: "assets/card_backs/back_alt_neoforja.png" },
-  { id: "alt_ceniza", label: "Ceniza", src: "assets/card_backs/back_alt_ceniza.png" }
+  { id: "bombers", label: "Bombers", src: "assets/card_backs/back_bombers.png" },
+  { id: "weavers", label: "Tejedores", src: "assets/card_backs/back_weavers.png" },
+  { id: "vanguard", label: "Vanguardia", src: "assets/card_backs/back_vanguard.png" },
+  { id: "rollers", label: "Rollers", src: "assets/card_backs/back_rollers.png" },
+  { id: "acids", label: "Acidos", src: "assets/card_backs/back_acids.png" },
+  { id: "sugar_riot", label: "Sugar Riot", src: "assets/card_backs/back_sugar_riot.png" },
+  { id: "league_1", label: "Liga Skate", src: "assets/card_backs/back_league_1.png" },
+  { id: "league_2", label: "Liga Metro", src: "assets/card_backs/back_league_2.png" },
+  { id: "league_3", label: "El Orden", src: "assets/card_backs/back_league_3.png" }
 ];
 
 const ENEMY_BACKS_NORMAL = [
@@ -885,8 +1002,8 @@ function renderDeckSelector() {
     const f = FACTIONS[deck.id];
     const h = FACTION_HEROES[deck.id];
     const locked = Boolean(deck.secret && !isPastelUnlocked());
-    const heroArt = `assets/heroes/hero_${deck.id}_${h.id}.png`;
-    const deckArt = `assets/decks/deck_${deck.id}.png`;
+    const heroArt = h.art || `assets/heroes/hero_${deck.id}_${h.id}.png`;
+    const deckArt = f.deckArt || `assets/decks/deck_${deck.id}.png`;
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -937,7 +1054,7 @@ function renderDeckSelector() {
 }
 
 function renderDeckDetailPanel(deckIdOverride) {
-  const deck = STARTER_DECKS[deckIdOverride || selectedStarterDeckId] || STARTER_DECKS.forja;
+  const deck = STARTER_DECKS[deckIdOverride || selectedStarterDeckId] || STARTER_DECKS.bombers;
   const f = FACTIONS[deck.id];
   const nameEl = document.getElementById("deck-detail-name");
   const tagEl = document.getElementById("deck-detail-tag");
@@ -989,68 +1106,68 @@ function getEffectiveGoldCost(card) {
 
 const STAGES = [
   {
-    name: "CAPITAN HIERRO",
-    hp: 48,
-    avatar: "assets/heroes/enemy_capitan_hierro.png",
+    name: "THE SCRAPPER",
+    hp: 44,
+    avatar: "assets/spraycasters/order/order_scrapper.png",
     frame: "assets/ui/portrait_frame_iron.png",
-    arenaBg: "assets/ui/arena_bg.png",
-    cardBack: "assets/ui/card_back_enemy.png",
-    baseAtk: 7,
-    summonName: "Centinela",
-    summonAtk: 3,
-    summonHp: 5,
+    arenaBg: "assets/spraycasters/arenas/arena_skatepark.png",
+    cardBack: "assets/card_backs/back_league_1.png",
+    baseAtk: 6,
+    summonName: "Dron Limpiador",
+    summonAtk: 2,
+    summonHp: 4,
     boosterTier: "basico"
   },
   {
-    name: "MAGA DE CRISTALES",
+    name: "THE ENFORCER",
     hp: 56,
-    avatar: "assets/heroes/enemy_maga_cristales.png",
+    avatar: "assets/spraycasters/order/order_enforcer.png",
     frame: "assets/ui/portrait_frame_crystal.png",
-    arenaBg: "assets/ui/arena_bg_2.png",
-    cardBack: "assets/ui/card_back_enemy_2.png",
+    arenaBg: "assets/spraycasters/arenas/arena_metro.png",
+    cardBack: "assets/card_backs/back_league_2.png",
     baseAtk: 8,
-    summonName: "Golem Cristal",
-    summonAtk: 3,
+    summonName: "Escuadron Antidisturbios",
+    summonAtk: 4,
     summonHp: 6,
     boosterTier: "raro"
   },
   {
-    name: "SENOR TITAN",
-    hp: 68,
-    avatar: "assets/heroes/enemy_senor_titan.png",
+    name: "THE OVERLORD",
+    hp: 70,
+    avatar: "assets/spraycasters/order/order_overlord.png",
     frame: "assets/ui/portrait_frame_obsidian.png",
-    arenaBg: "assets/ui/arena_bg_3.png",
-    cardBack: "assets/ui/card_back_enemy_3.png",
+    arenaBg: "assets/spraycasters/arenas/arena_metro.png",
+    cardBack: "assets/card_backs/back_league_3.png",
     baseAtk: 10,
-    summonName: "Coloso Hierro",
-    summonAtk: 4,
-    summonHp: 7,
+    summonName: "Mecha de Censura",
+    summonAtk: 5,
+    summonHp: 8,
     boosterTier: "epico"
   }
 ];
 
 const BOOSTER_TIERS = {
   basico: {
-    label: "BOOSTER BASICO",
-    img: "assets/boosters/booster_basico.png",
+    label: "LATA DE SPRAY BASICA",
+    img: "assets/spraycasters/sprays/spray_bombers.png",
     count: 2,
     rarities: ["comun", "comun", "rara"]
   },
   raro: {
-    label: "BOOSTER RARO",
-    img: "assets/boosters/booster_raro.png",
+    label: "LATA DE SPRAY RARA",
+    img: "assets/spraycasters/sprays/spray_booster_rara.png",
     count: 3,
     rarities: ["comun", "rara", "rara", "epica"]
   },
   epico: {
-    label: "BOOSTER EPICO",
-    img: "assets/boosters/booster_epico.png",
+    label: "LATA DE SPRAY EPICA",
+    img: "assets/spraycasters/sprays/spray_booster_epica.png",
     count: 3,
     rarities: ["rara", "epica", "epica", "legendaria"]
   },
   legendario: {
-    label: "BOOSTER LEGENDARIO",
-    img: "assets/boosters/booster_legendario.png",
+    label: "LATA DE SPRAY LEGENDARIA",
+    img: "assets/spraycasters/sprays/spray_booster_legendaria.png",
     count: 3,
     rarities: ["epica", "legendaria", "legendaria"]
   }
@@ -1168,8 +1285,8 @@ function triggerShake(selector) {
 }
 
 function startNewRun() {
-  const chosenDeck = STARTER_DECKS[selectedStarterDeckId] || STARTER_DECKS.forja;
-  const hero = FACTION_HEROES[chosenDeck.id] || FACTION_HEROES.forja;
+  const chosenDeck = STARTER_DECKS[selectedStarterDeckId] || STARTER_DECKS.bombers;
+  const hero = FACTION_HEROES[chosenDeck.id] || FACTION_HEROES.bombers;
   const mapNav = window.MapSystem ? window.MapSystem.createMapRunState() : null;
   runState = {
     stageIndex: 0,
@@ -1242,13 +1359,25 @@ function startStageWithConfig(stage, tierIdx = 0) {
   applyCardBackLayers(playerDeckImgEl, playerDeckTopEl, chosenPlayerBack);
 
   const playerDeck = shuffle(runState.permanentDeck).map((id) => createCardInstance(id, false));
+  const orderTierTarget = stage.isBoss ? "boss" : (stage.isElite ? "elite" : "normal");
+  const orderPool = Object.values(CARD_CATALOG).filter((c) => {
+    if (c.faction !== "orden") return false;
+    if (orderTierTarget === "boss") return c.orderTier === "boss" || c.orderTier === "elite";
+    if (orderTierTarget === "elite") return c.orderTier === "elite" || c.orderTier === "normal";
+    return c.orderTier === "normal";
+  });
+  const randomOrderDeckIds = [];
+  if (orderPool.length > 0) {
+    for (let i = 0; i < 10; i++) {
+      randomOrderDeckIds.push(orderPool[Math.floor(Math.random() * orderPool.length)].id);
+    }
+  }
   const fallbackEnemyDeckIds = [
-    "forja_aprendiz", "escudero", "ariete", "golem",
-    "forja_escudo_torre", "forja_martillazo", "golpe", "escudo"
+    "orden_scrapper", "orden_street_censor", "orden_whitewash_spray", "orden_riot_barrier"
   ];
-  const rawEnemyIds = Array.isArray(stage.deckIds) && stage.deckIds.length > 0
-    ? stage.deckIds
-    : fallbackEnemyDeckIds;
+  const rawEnemyIds = randomOrderDeckIds.length > 0
+    ? randomOrderDeckIds
+    : (Array.isArray(stage.deckIds) && stage.deckIds.length > 0 ? stage.deckIds : fallbackEnemyDeckIds);
   const enemyDeck = shuffle(rawEnemyIds)
     .filter((id) => Boolean(CARD_CATALOG[id]))
     .map((id) => createCardInstance(id, false));
@@ -1294,14 +1423,17 @@ function startStageWithConfig(stage, tierIdx = 0) {
     player: {
       hp: runState.playerHp,
       maxHp: runState.playerMaxHp,
-      armor: runState.faction === "forja" ? 1 : 0,
+      armor: runState.faction === "vanguard" ? 1 : 0,
+      poison: 0,
       energy: 3,
       maxEnergy: 3,
-      gold: (runState.nextStageBonusGold || 0) + (runState.faction === "sindicato" ? 2 : 0),
+      gold: (runState.nextStageBonusGold || 0) + (runState.faction === "rollers" ? 2 : 0),
       deck: playerDeck,
       hand: [],
       discard: [],
       board: [null, null, null],
+      paint: ["neutral", "neutral", "neutral"],
+      lockedSlots: [0, 0, 0],
       relics: [null, null]
     },
     enemy: {
@@ -1311,6 +1443,7 @@ function startStageWithConfig(stage, tierIdx = 0) {
       cardBack: chosenEnemyBack,
       hp: stage.hp,
       maxHp: stage.hp,
+      poison: 0,
       baseAtk: stage.baseAtk,
       summonName: stage.summonName,
       summonAtk: stage.summonAtk,
@@ -1331,6 +1464,8 @@ function startStageWithConfig(stage, tierIdx = 0) {
       handCount: 0,
       deckCount: enemyDeck.length,
       board: initialBoard,
+      paint: ["neutral", "neutral", "neutral"],
+      lockedSlots: [0, 0, 0],
       intention: null
     },
     marketDeck: marketPool,
@@ -1344,7 +1479,7 @@ function startStageWithConfig(stage, tierIdx = 0) {
   drawEnemyCards(state.enemy.handSize);
   rollEnemyIntention();
   runState.nextStageBonusGold = 0;
-  drawCards(runState.faction === "arcano" ? 6 : 5);
+  drawCards(runState.faction === "weavers" ? 6 : 5);
   document.getElementById("game-over-modal").classList.add("hidden");
   document.getElementById("booster-modal").classList.add("hidden");
   document.getElementById("pvp-action-toast")?.classList.add("hidden");
@@ -1370,6 +1505,28 @@ function refillMarketSlot(index) {
   state.marketRow[index] = state.marketDeck.pop();
 }
 
+function animateCardFlight(fromTarget, toTarget, imgSrc, delayMs = 0) {
+  setTimeout(() => {
+    const fromEl = typeof fromTarget === "string" ? document.querySelector(fromTarget) : fromTarget;
+    const toEl = typeof toTarget === "string" ? document.querySelector(toTarget) : toTarget;
+    if (!fromEl || !toEl) return;
+    const rFrom = fromEl.getBoundingClientRect();
+    const rTo = toEl.getBoundingClientRect();
+    if (!rFrom.width || !rTo.width) return;
+    const ghost = document.createElement("div");
+    ghost.className = "flying-card-ghost";
+    ghost.innerHTML = `<img src="${imgSrc || getSelectedPlayerCardBack()}" alt="" />`;
+    ghost.style.left = `${rFrom.left + rFrom.width / 2 - 42}px`;
+    ghost.style.top = `${rFrom.top + rFrom.height / 2 - 58}px`;
+    document.body.appendChild(ghost);
+    requestAnimationFrame(() => {
+      ghost.style.transform = `translate(${(rTo.left + rTo.width / 2) - (rFrom.left + rFrom.width / 2)}px, ${(rTo.top + rTo.height / 2) - (rFrom.top + rFrom.height / 2)}px) scale(0.84) rotate(8deg)`;
+      ghost.style.opacity = "0.18";
+    });
+    setTimeout(() => ghost.remove(), 380);
+  }, delayMs);
+}
+
 function drawCards(count) {
   let drawnCount = 0;
   let reshuffled = false;
@@ -1383,6 +1540,7 @@ function drawCards(count) {
     const drawn = state.player.deck.pop();
     drawn.justDrawn = true;
     state.player.hand.push(drawn);
+    animateCardFlight("#player-deck-pile", "#player-hand", drawn.art || getSelectedPlayerCardBack(), drawnCount * 65);
     drawnCount++;
   }
   if (reshuffled) {
@@ -1424,7 +1582,7 @@ function dealDamageToHero(target, amount) {
   triggerShake(selector);
   if (remaining > 0) {
     spawnFx(selector, `-${remaining} HP`, "fx-dmg");
-    window.SFX?.play("attack_hit");
+    window.SFX?.play(remaining >= 5 ? "dubstep_drop_hit" : "attack_hit");
     window.VFX?.playHeroHit(selector, remaining, false);
   } else {
     spawnFx(selector, "BLOQUEADO", "fx-shd");
@@ -1527,7 +1685,7 @@ function checkGameOver() {
     playCombatFinisher(true, headline, subline, () => {
       if (isBossWin) {
         unlockPastelFaction(true);
-        showModal("CAMPEON DE LA RUN", "Has derrotado a todos los rivales y al Senor Titan.", true);
+        showModal("CAMPEON DE LA CIUDAD", "Has derrotado a todas las brigadas de El Orden y al Alto Comisario Overlord.", true);
       } else {
         openBoosterModal(false);
       }
@@ -1642,12 +1800,27 @@ function buildCardStatIcons(card) {
   };
 }
 
+const SPRAY_FACTION_ICONS = {
+  bombers: "assets/spraycasters/icons/icon_bombers.png",
+  weavers: "assets/spraycasters/icons/icon_weavers.png",
+  vanguard: "assets/spraycasters/icons/icon_vanguard.png",
+  rollers: "assets/spraycasters/icons/icon_rollers.png",
+  acids: "assets/spraycasters/icons/icon_acids.png",
+  sugar_riot: "assets/spraycasters/icons/icon_sugar_riot.png"
+};
+
+function getCardFactionIcon(faction) {
+  return SPRAY_FACTION_ICONS[faction] || "";
+}
+
 function createVisualCardEl(card, { mini = false, showNote = false } = {}) {
   const { iconsHtml, complexNote } = buildCardStatIcons(card);
+  const factionIcon = getCardFactionIcon(card.faction);
   const el = document.createElement("div");
   el.className = `hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"} ${card.ephemeral ? "ephemeral" : ""} ${mini ? "mini-deck-card" : ""}`;
   el.innerHTML = `
     <div class="card-type-crest" title="Tipo: ${card.type}"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
+    ${factionIcon ? `<div class="card-faction-crest" title="Faccion: ${card.faction}"><img src="${factionIcon}" alt="${card.faction}" /></div>` : ""}
     ${buildCardBadges(card)}
     <div class="card-banner card-banner-cost-only">
       <span class="energy-cost"><span>${card.cost}</span></span>
@@ -1670,9 +1843,14 @@ function renderBoosterDeckPreview() {
   runState.permanentDeck.forEach((id) => {
     counts[id] = (counts[id] || 0) + 1;
   });
-  el.innerHTML = `<div class="deck-preview-header">TU MAZO ACTUAL (${runState.permanentDeck.length} CARTAS)</div>`;
+  el.innerHTML = "";
+  const toggleBtn = document.createElement("button");
+  toggleBtn.type = "button";
+  toggleBtn.className = "game-plate-btn plate-slate booster-deck-toggle-btn";
+  toggleBtn.textContent = `VER MI MAZO (${runState.permanentDeck.length} CARTAS)`;
+
   const row = document.createElement("div");
-  row.className = "deck-preview-cards";
+  row.className = "deck-preview-cards hidden";
   Object.entries(counts).forEach(([id, qty]) => {
     const stack = document.createElement("div");
     stack.className = "inventory-card-stack mini-stack";
@@ -1683,6 +1861,15 @@ function renderBoosterDeckPreview() {
     stack.appendChild(qtyLabel);
     row.appendChild(stack);
   });
+
+  toggleBtn.addEventListener("click", () => {
+    const isHidden = row.classList.toggle("hidden");
+    toggleBtn.textContent = isHidden
+      ? `VER MI MAZO (${runState.permanentDeck.length} CARTAS)`
+      : `OCULTAR MI MAZO (${runState.permanentDeck.length} CARTAS)`;
+  });
+
+  el.appendChild(toggleBtn);
   el.appendChild(row);
 }
 
@@ -1691,7 +1878,11 @@ function openBoosterModal(isInitial = false) {
   const enc = runState.currentEncounter;
   const stage = enc || STAGES[runState.stageIndex];
   const tierKey = isInitial ? "basico" : (stage?.boosterTier || "basico");
-  const tier = BOOSTER_TIERS[tierKey] || BOOSTER_TIERS.basico;
+  const baseTier = BOOSTER_TIERS[tierKey] || BOOSTER_TIERS.basico;
+  const activeFaction = runState.faction || selectedStarterDeckId || "bombers";
+  const tier = tierKey === "basico"
+    ? { ...baseTier, img: `assets/spraycasters/sprays/spray_${activeFaction}.png` }
+    : baseTier;
   const victoryBanner = document.getElementById("booster-victory-banner");
   if (victoryBanner) {
     victoryBanner.classList.toggle("hidden", isInitial);
@@ -1703,7 +1894,8 @@ function openBoosterModal(isInitial = false) {
   document.getElementById("booster-subtitle").textContent = isInitial
     ? "Abre tu sobre inicial para elegir 1 carta permanente antes de entrar al mapa."
     : `Cartas efimeras limpiadas${rewardNote}. Elige 1 carta permanente y avanza en el mapa.`;
-  document.getElementById("booster-pack-img").src = tier.img;
+  const packImgEl = document.getElementById("booster-pack-img");
+  if (packImgEl) packImgEl.src = tier.img;
   renderBoosterDeckPreview();
 
   const packStage = document.getElementById("booster-pack-stage");
@@ -1714,14 +1906,31 @@ function openBoosterModal(isInitial = false) {
   choicesEl.classList.add("hidden");
   choicesEl.innerHTML = "";
 
-  packStage.onclick = () => {
-    if (packStage.classList.contains("opening")) return;
-    packStage.classList.add("opening");
-    burstEl.classList.remove("active");
-    void burstEl.offsetWidth;
-    burstEl.classList.add("active");
-    setTimeout(() => revealBoosterCards(tier, isInitial, tierKey), 460);
-  };
+  const preRolledIds = rollBoosterIds(tier);
+  if (window.SprayBooster && typeof window.SprayBooster.mount === "function") {
+    packStage.onclick = null;
+    const preRolledCards = preRolledIds.map((id) => CARD_CATALOG[id]).filter(Boolean);
+    window.SprayBooster.mount(packStage, preRolledCards, tier.img, () => {
+      burstEl.classList.remove("active");
+      void burstEl.offsetWidth;
+      burstEl.classList.add("active");
+      revealBoosterCards(tier, isInitial, tierKey, preRolledIds);
+    });
+  } else {
+    packStage.innerHTML = `<img id="booster-pack-img" src="${tier.img}" alt="Booster Pack" />`;
+    packStage.onclick = () => {
+      if (packStage.classList.contains("opening")) return;
+      packStage.classList.add("opening");
+      window.SFX?.play("spray_shake");
+      burstEl.classList.remove("active");
+      void burstEl.offsetWidth;
+      burstEl.classList.add("active");
+      setTimeout(() => {
+        window.SFX?.play("spray_burst");
+        revealBoosterCards(tier, isInitial, tierKey, preRolledIds);
+      }, 460);
+    };
+  }
   document.getElementById("booster-modal").classList.remove("hidden");
   window.FTUE?.onBoosterOpen(isInitial);
 }
@@ -1761,15 +1970,7 @@ function attachCardParallax(cardEl, targetEl = cardEl) {
   });
 }
 
-function revealBoosterCards(tier, isInitial = false, tierKey = "basico") {
-  window.CollectionSystem?.recordBoosterOpened(tierKey);
-  const packStage = document.getElementById("booster-pack-stage");
-  packStage.classList.add("hidden");
-  packStage.classList.remove("opening");
-  const choicesEl = document.getElementById("booster-choices");
-  choicesEl.classList.remove("hidden");
-  choicesEl.innerHTML = "";
-
+function rollBoosterIds(tier) {
   const pickedIds = [];
   for (let i = 0; i < tier.count; i++) {
     const targetRarity = tier.rarities[Math.floor(Math.random() * tier.rarities.length)];
@@ -1798,6 +1999,19 @@ function revealBoosterCards(tier, isInitial = false, tierKey = "basico") {
     const chosenId = candidates[Math.floor(Math.random() * candidates.length)];
     pickedIds.push(chosenId);
   }
+  return pickedIds;
+}
+
+function revealBoosterCards(tier, isInitial = false, tierKey = "basico", preRolledIds = null) {
+  window.CollectionSystem?.recordBoosterOpened(tierKey);
+  const packStage = document.getElementById("booster-pack-stage");
+  packStage.classList.add("hidden");
+  packStage.classList.remove("opening");
+  const choicesEl = document.getElementById("booster-choices");
+  choicesEl.classList.remove("hidden");
+  choicesEl.innerHTML = "";
+
+  const pickedIds = Array.isArray(preRolledIds) && preRolledIds.length ? preRolledIds : rollBoosterIds(tier);
 
   pickedIds.forEach((id, idx) => {
     const card = CARD_CATALOG[id];
@@ -1806,8 +2020,9 @@ function revealBoosterCards(tier, isInitial = false, tierKey = "basico") {
     wrap.className = "booster-pick-wrap";
     wrap.style.animationDelay = `${idx * 140}ms`;
     wrap.innerHTML = `
-      <div class="hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"}" title="${card.desc}">
-        <div class="card-type-crest" title="Tipo: ${card.type}"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
+      <div class="hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"}">
+        <div class="card-type-crest"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
+        ${getCardFactionIcon(card.faction) ? `<div class="card-faction-crest"><img src="${getCardFactionIcon(card.faction)}" alt="${card.faction}" /></div>` : ""}
         ${buildCardBadges(card)}
         <div class="card-banner card-banner-cost-only">
           <span class="energy-cost"><span>${card.cost}</span></span>
@@ -1822,6 +2037,7 @@ function revealBoosterCards(tier, isInitial = false, tierKey = "basico") {
     `;
     const cardEl = wrap.querySelector(".hand-card");
     attachCardParallax(cardEl);
+    attachCardHoverInspector(cardEl, card);
     wrap.addEventListener("click", (ev) => pickBoosterCard(id, isInitial, ev.currentTarget));
     choicesEl.appendChild(wrap);
     if (card.rarity === "epica" || card.rarity === "legendaria" || card.rarity === "rara") {
@@ -1876,6 +2092,19 @@ function applyEquipToUnit(slotIndex, card, handIndex) {
   if (st.pierce) unit.pierce = true;
   if (st.stealth) unit.stealth = true;
   if (st.haste) unit.ready = true;
+  if (st.burnOnHit) unit.burnOnHit = (unit.burnOnHit || 0) + st.burnOnHit;
+  if (st.heroDmgBonus) unit.heroDmgBonus = (unit.heroDmgBonus || 0) + st.heroDmgBonus;
+  if (st.discardOnHit) unit.discardOnHit = (unit.discardOnHit || 0) + st.discardOnHit;
+  if (st.drawOnHit) unit.drawOnHit = (unit.drawOnHit || 0) + st.drawOnHit;
+  if (st.spellShield) unit.spellShield = (unit.spellShield || 0) + st.spellShield;
+  if (st.thorns) unit.thorns = (unit.thorns || 0) + st.thorns;
+  if (st.shieldBash) unit.shieldBash = true;
+  if (st.splashDmg) unit.splashDmg = (unit.splashDmg || 0) + st.splashDmg;
+  if (st.bountyGold) unit.bountyGold = (unit.bountyGold || 0) + st.bountyGold;
+  if (st.poisonOnHit) unit.poisonOnHit = (unit.poisonOnHit || 0) + st.poisonOnHit;
+  if (st.regen) unit.regen = (unit.regen || 0) + st.regen;
+  if (st.stunOnHit) unit.stunOnHit = true;
+
   unit.equips = unit.equips || [];
   unit.equips.push(card.name);
 
@@ -1887,7 +2116,7 @@ function applyEquipToUnit(slotIndex, card, handIndex) {
   }
   state.pendingEquip = null;
   const targetSlotSel = `#player-slots .unit-slot:nth-child(${slotIndex + 1})`;
-  spawnFx(targetSlotSel, `+${st.atk || 0}/+${st.hp || 0}`, "fx-heal");
+  spawnFx(targetSlotSel, card.shortTag || `+${st.atk || 0}/+${st.hp || 0}`, "fx-heal");
   window.VFX?.playCardPlay(card, null, targetSlotSel);
   setHint(`Equipaste ${card.name} en ${unit.name}.`);
   render();
@@ -1912,25 +2141,31 @@ function playCard(handIndex) {
   let vfxTargetSelector = null;
 
   if (card.type === "Unidad") {
-    const emptySlot = state.player.board.findIndex((u) => u === null);
+    const locked = state.player.lockedSlots || [0, 0, 0];
+    const emptySlot = state.player.board.findIndex((u, i) => u === null && (locked[i] || 0) <= 0);
     if (emptySlot === -1) {
       window.SFX?.play("invalid_action");
-      setHint("Mesa llena (maximo 3 unidades). No puedes jugar mas unidades.");
+      setHint("No hay casillas disponibles (llenas o bloqueadas por El Orden).");
       return;
     }
     window.SFX?.play("play_card");
     vfxTargetSelector = `#player-slots .unit-slot:nth-child(${emptySlot + 1})`;
     state.player.energy -= card.cost;
     state.player.hand.splice(handIndex, 1);
-    const legionBonus = (runState.faction === "legion" && card.haste) ? 1 : 0;
-    if (legionBonus > 0) {
-      triggerHeroPassiveFx("PASIVA: +1 ATK PRISA", "fx-dmg");
+    const bombersBonus = (runState.faction === "bombers" && card.haste) ? 1 : 0;
+    const isAlreadyPainted = state.player.paint?.[emptySlot] === "player";
+    const territorialBonus = isAlreadyPainted ? 1 : 0;
+    if (bombersBonus > 0) {
+      triggerHeroPassiveFx("PASIVA: +1 ATK FRESCA", "fx-dmg");
       spawnFx(vfxTargetSelector, "PASIVA +1 ATK", "fx-dmg");
+    }
+    if (territorialBonus > 0) {
+      spawnFx(vfxTargetSelector, "TERRITORIO +1 ATK", "fx-gold");
     }
     state.player.board[emptySlot] = {
       name: card.name,
       art: card.art,
-      atk: card.atk + legionBonus,
+      atk: card.atk + bombersBonus + territorialBonus,
       hp: card.hp,
       maxHp: card.hp,
       guard: card.guard,
@@ -1938,11 +2173,19 @@ function playCard(handIndex) {
       stealth: Boolean(card.stealth),
       pierce: Boolean(card.pierce),
       cute: Boolean(card.cute),
+      poisonOnHit: card.poisonOnHit || 0,
       onDeath: card.onDeath || null,
       upkeep: card.upkeep || 0,
       equips: [],
       ephemeral: card.ephemeral
     };
+    if (!state.player.paint) state.player.paint = ["neutral", "neutral", "neutral"];
+    state.player.paint[emptySlot] = "player";
+    window.SFX?.play("paint_capture");
+    window.SprayVFX?.splatterAt(vfxTargetSelector, "#00e5ff", false);
+    if (card.onPlayDiscardEnemy) {
+      buildEffectFromData({ discardEnemy: card.onPlayDiscardEnemy })(state);
+    }
     if (card.onPlay) card.onPlay(state);
   } else if (card.type === "Reliquia") {
     const emptyRelic = state.player.relics.findIndex((r) => r === null);
@@ -1991,6 +2234,12 @@ function playCard(handIndex) {
     animateCardDissolve(handIndex, card.vfxType || "beam");
     state.player.energy -= card.cost;
     state.player.hand.splice(handIndex, 1);
+    // Trigger spellShield units on player board when casting a spell
+    const totalSpellShd = state.player.board.reduce((sum, u) => sum + (u?.spellShield || 0), 0);
+    if (totalSpellShd > 0) {
+      state.player.armor += totalSpellShd;
+      spawnFx("#player-hero-panel", `STYLUS +${totalSpellShd} SHD`, "fx-shd");
+    }
     card.effect(state);
     // Temporary Market cards are eliminated on use instead of going to discard
     if (!card.ephemeral) {
@@ -1998,6 +2247,10 @@ function playCard(handIndex) {
     }
   }
 
+  animateCardFlight(handCardEl || "#player-hand", vfxTargetSelector || "#player-slots", card.art);
+  if (card.type !== "Unidad" && card.type !== "Reliquia" && !card.ephemeral) {
+    animateCardFlight(vfxTargetSelector || "#player-hero-panel", "#player-discard-pile", card.art, 220);
+  }
   window.VFX?.playCardPlay(card, handCardEl, vfxTargetSelector);
 
   state.selectedUnitIndex = null;
@@ -2151,7 +2404,7 @@ function triggerUnitDeath(side, slotIndex) {
     window.VFX?.playUnitDestroy(slotSel, side === "enemy");
   }
   state[side].board[slotIndex] = null;
-  if (side === "player" && runState.faction === "culto") {
+  if (side === "player" && runState.faction === "acids") {
     const healed = Math.min(2, state.player.maxHp - state.player.hp);
     if (healed > 0) {
       state.player.hp += healed;
@@ -2159,6 +2412,10 @@ function triggerUnitDeath(side, slotIndex) {
     }
   }
   if (side === "player" && onDeath) {
+    if (onDeath.poisonEnemy) {
+      state.enemy.poison = (state.enemy.poison || 0) + onDeath.poisonEnemy;
+      spawnFx("#enemy-hero-panel", `+${onDeath.poisonEnemy} VENENO`, "fx-heal");
+    }
     if (onDeath.gold) {
       state.player.gold += onDeath.gold;
       spawnFx("#player-gold", `+${onDeath.gold} ORO`, "fx-gold");
@@ -2231,14 +2488,43 @@ function attackEnemyUnit(enemySlotIndex) {
 
   animateUnitLunge(attackerSel, defenderSel, () => {
     window.SFX?.play("attack_hit");
-    defender.hp -= attacker.atk;
+    const bonusBash = attacker.shieldBash ? Math.floor((state.player.armor || 0) * 0.5) : 0;
+    const totalAtk = attacker.atk + bonusBash;
+    defender.hp -= totalAtk;
     attacker.hp -= defender.atk;
     attacker.ready = false;
 
     spawnVfxShape(defenderSel, "vfx-slash");
     triggerShake(defenderSel);
-    spawnFx(defenderSel, `-${attacker.atk}`, "fx-dmg");
+    spawnFx(defenderSel, `-${totalAtk}`, "fx-dmg");
     spawnFx(`#player-slots .unit-slot:nth-child(${attackerIdx + 1})`, `-${defender.atk}`, "fx-dmg");
+
+    if (attacker.burnOnHit) {
+      dealDamageToHero("enemy", attacker.burnOnHit);
+      spawnFx("#enemy-hero-panel", `QUEMA -${attacker.burnOnHit}`, "fx-dmg");
+    }
+    if (attacker.poisonOnHit) {
+      state.enemy.poison = (state.enemy.poison || 0) + attacker.poisonOnHit;
+      spawnFx("#enemy-hero-panel", `+${attacker.poisonOnHit} VENENO`, "fx-heal");
+    }
+    if (attacker.discardOnHit) {
+      buildEffectFromData({ discardEnemy: attacker.discardOnHit })(state);
+    }
+    if (attacker.drawOnHit) {
+      drawCards(attacker.drawOnHit);
+    }
+    if (attacker.stunOnHit && defender.hp > 0) {
+      defender.stunned = true;
+      spawnFx(defenderSel, "ATURDIDA", "fx-shd");
+    }
+    if (attacker.splashDmg) {
+      state.enemy.board.forEach((other, oIdx) => {
+        if (!other || oIdx === enemySlotIndex) return;
+        other.hp -= attacker.splashDmg;
+        spawnFx(`#enemy-slots .unit-slot:nth-child(${oIdx + 1})`, `-${attacker.splashDmg}`, "fx-dmg");
+        if (other.hp <= 0) triggerUnitDeath("enemy", oIdx);
+      });
+    }
 
     if (attacker.pierce && defender.hp < 0) {
       const excess = Math.abs(defender.hp);
@@ -2247,7 +2533,13 @@ function attackEnemyUnit(enemySlotIndex) {
       spawnFx("#enemy-hero-panel", `PERFORA -${excess}`, "fx-dmg");
     }
 
-    if (defender.hp <= 0) triggerUnitDeath("enemy", enemySlotIndex);
+    if (defender.hp <= 0) {
+      if (attacker.bountyGold) {
+        state.player.gold += attacker.bountyGold;
+        spawnFx("#player-gold", `BOTIN +${attacker.bountyGold} ORO`, "fx-gold");
+      }
+      triggerUnitDeath("enemy", enemySlotIndex);
+    }
     if (attacker.hp <= 0) triggerUnitDeath("player", attackerIdx);
 
     setHint("Combate resuelto.");
@@ -2317,9 +2609,21 @@ function attackEnemyHero() {
 
   animateUnitLunge(attackerSel, "#enemy-hero-panel", () => {
     spawnVfxShape("#enemy-hero-panel", "vfx-slash");
-    dealDamageToHero("enemy", attacker.atk);
+    const bonusBash = attacker.shieldBash ? Math.floor((state.player.armor || 0) * 0.5) : 0;
+    const totalDmg = attacker.atk + (attacker.heroDmgBonus || 0) + (attacker.burnOnHit || 0) + bonusBash;
+    dealDamageToHero("enemy", totalDmg);
+    if (attacker.poisonOnHit) {
+      state.enemy.poison = (state.enemy.poison || 0) + attacker.poisonOnHit;
+      spawnFx("#enemy-hero-panel", `+${attacker.poisonOnHit} VENENO`, "fx-heal");
+    }
+    if (attacker.discardOnHit) {
+      buildEffectFromData({ discardEnemy: attacker.discardOnHit })(state);
+    }
+    if (attacker.drawOnHit) {
+      drawCards(attacker.drawOnHit);
+    }
     attacker.ready = false;
-    setHint(`Atacaste al Heroe rival por ${attacker.atk} de dano.`);
+    setHint(`Atacaste al Heroe rival por ${totalDmg} de dano.`);
     render();
   });
 }
@@ -2726,13 +3030,35 @@ function applyEnemyDescriptor(desc, sourceType, ctx) {
   if (desc.damageHero) {
     ctx.pendingSpellHeroDmg += desc.damageHero + spellBonus;
   }
+  if (desc.cleansePlayerPaint) {
+    const pPaint = state.player.paint || ["neutral", "neutral", "neutral"];
+    const pIdx = pPaint.findIndex((p) => p === "player");
+    if (pIdx !== -1) {
+      pPaint[pIdx] = "neutral";
+      spawnFx(`#player-slots .unit-slot:nth-child(${pIdx + 1})`, "BLANQUEO", "fx-shd");
+    }
+  }
+  if (desc.cleanseAllPlayerPaint) {
+    state.player.paint = ["neutral", "neutral", "neutral"];
+    spawnFx("#player-slots", "PURGA DE PINTURA", "fx-shd");
+  }
+  if (desc.lockPlayerSlot) {
+    state.player.lockedSlots = state.player.lockedSlots || [0, 0, 0];
+    const emptyIdx = state.player.board.findIndex((u, i) => u === null && state.player.lockedSlots[i] <= 0);
+    const targetSlot = emptyIdx !== -1 ? emptyIdx : state.player.lockedSlots.findIndex((t) => t <= 0);
+    if (targetSlot !== -1) {
+      state.player.lockedSlots[targetSlot] = Math.max(state.player.lockedSlots[targetSlot], desc.lockPlayerSlot);
+      spawnFx(`#player-slots .unit-slot:nth-child(${targetSlot + 1})`, `BLOQUEADA ${desc.lockPlayerSlot}T`, "fx-dmg");
+    }
+  }
 }
 
 function resolveEnemyCardPlay(card, ctx) {
   if (!card || state.gameOver) return;
 
   if (card.type === "Unidad") {
-    const emptyIdx = state.enemy.board.findIndex((u) => u === null);
+    const locked = state.enemy.lockedSlots || [0, 0, 0];
+    const emptyIdx = state.enemy.board.findIndex((u, i) => u === null && (locked[i] || 0) <= 0);
     if (emptyIdx !== -1) {
       window.SFX?.play("play_card");
       state.enemy.board[emptyIdx] = {
@@ -2748,6 +3074,18 @@ function resolveEnemyCardPlay(card, ctx) {
         onDeath: card.onDeath || null,
         stunned: false
       };
+      if (!state.enemy.paint) state.enemy.paint = ["neutral", "neutral", "neutral"];
+      if (card.faction === "orden") {
+        state.enemy.paint[emptyIdx] = "neutral";
+        if (state.player.paint?.[emptyIdx] === "player") {
+          state.player.paint[emptyIdx] = "neutral";
+        }
+        window.SFX?.play("order_cleanse_beam");
+        window.SprayVFX?.splatterAt(`#enemy-slots .unit-slot:nth-child(${emptyIdx + 1})`, "#e2e8f0", true);
+      } else {
+        state.enemy.paint[emptyIdx] = "enemy";
+        window.SprayVFX?.splatterAt(`#enemy-slots .unit-slot:nth-child(${emptyIdx + 1})`, "#ff3b5c", false);
+      }
       spawnFx(`#enemy-slots .unit-slot:nth-child(${emptyIdx + 1})`, card.haste ? "PRISA!" : "INVOCADA", "fx-gold");
       if (card.id === "goblin") {
         ctx.pendingSpellHeroDmg += 2;
@@ -2847,6 +3185,23 @@ function executeEnemyTurn() {
   if (state.gameOver) return;
   state.enemy.armor = 0;
 
+  // Decrement enemy locked slots
+  if (Array.isArray(state.enemy.lockedSlots)) {
+    state.enemy.lockedSlots = state.enemy.lockedSlots.map((t) => Math.max(0, (t || 0) - 1));
+  }
+
+  // Apply Poison/Corrosion at start of enemy turn (ignores SHD)
+  if ((state.enemy.poison || 0) > 0) {
+    const pDmg = state.enemy.poison;
+    state.enemy.hp = Math.max(0, state.enemy.hp - pDmg);
+    spawnFx("#enemy-hero-panel", `VENENO -${pDmg}`, "fx-heal");
+    state.enemy.poison = Math.max(0, state.enemy.poison - 1);
+    if (state.enemy.hp <= 0) {
+      endGame(true);
+      return;
+    }
+  }
+
   // Existing board units wake up (unless stunned)
   state.enemy.board.forEach((u, idx) => {
     if (!u) return;
@@ -2925,9 +3280,10 @@ function executeEnemyTurn() {
         if (targetIdx !== -1) {
           const pu = state.player.board[targetIdx];
           pu.hp -= unit.atk;
-          unit.hp -= pu.atk;
+          const totalReflect = pu.atk + (pu.thorns || 0);
+          unit.hp -= totalReflect;
           spawnFx(`#player-slots .unit-slot:nth-child(${targetIdx + 1})`, `-${unit.atk}`, "fx-dmg");
-          spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, `-${pu.atk}`, "fx-dmg");
+          spawnFx(`#enemy-slots .unit-slot:nth-child(${idx + 1})`, pu.thorns ? `-${pu.atk} (ESPINAS -${pu.thorns})` : `-${pu.atk}`, "fx-dmg");
           if (unit.pierce && pu.hp < 0) {
             const excess = Math.abs(pu.hp);
             dealDamageToHero("player", excess);
@@ -2985,6 +3341,10 @@ function finishEnemyTurn() {
     return;
   }
 
+  const handEls = Array.from(document.querySelectorAll("#player-hand .hand-card"));
+  state.player.hand.forEach((c, idx) => {
+    animateCardFlight(handEls[idx] || "#player-hand", "#player-discard-pile", c.art, idx * 45);
+  });
   while (state.player.hand.length > 0) {
     state.player.discard.push(state.player.hand.pop());
   }
@@ -2994,10 +3354,10 @@ function finishEnemyTurn() {
   state.player.armor = 0;
   state.player.energy = state.player.maxEnergy;
 
-  if (runState.faction === "forja") {
+  if (runState.faction === "vanguard") {
     state.player.armor += 1;
     triggerHeroPassiveFx("PASIVA: +1 SHD", "fx-shd");
-  } else if (runState.faction === "pastel") {
+  } else if (runState.faction === "sugar_riot") {
     let weakestIdx = -1;
     state.player.board.forEach((u, idx) => {
       if (!u) return;
@@ -3014,6 +3374,18 @@ function finishEnemyTurn() {
       spawnFx(`#player-slots .unit-slot:nth-child(${weakestIdx + 1})`, "+1/+1", "fx-heal");
     }
   }
+
+  // Decrement player locked slots & trigger unit regeneration
+  if (Array.isArray(state.player.lockedSlots)) {
+    state.player.lockedSlots = state.player.lockedSlots.map((t) => Math.max(0, (t || 0) - 1));
+  }
+  state.player.board.forEach((u, idx) => {
+    if (!u || !u.regen) return;
+    u.hp = Math.min(u.maxHp, u.hp + u.regen);
+    const hHero = Math.min(u.regen, state.player.maxHp - state.player.hp);
+    state.player.hp += hHero;
+    spawnFx(`#player-slots .unit-slot:nth-child(${idx + 1})`, `REGEN +${u.regen}`, "fx-heal");
+  });
 
   // Trigger active Relics at start of player turn and decrement duration
   (state.player.relics || []).forEach((relic, idx) => {
@@ -3080,11 +3452,11 @@ function triggerHeroPassiveFx(label, fxClass = "fx-shd") {
 }
 
 function render() {
-  const activeFaction = state.isPvp ? (state.player.factionId || "forja") : runState.faction;
+  const activeFaction = state.isPvp ? (state.player.factionId || "bombers") : runState.faction;
   const heroInfo = FACTION_HEROES[activeFaction];
   const playerAvatarImg = document.querySelector("#player-avatar-btn img");
   if (playerAvatarImg && heroInfo) {
-    playerAvatarImg.src = `assets/heroes/hero_${activeFaction}_${heroInfo.id}.png`;
+    playerAvatarImg.src = heroInfo.art || `assets/heroes/hero_${activeFaction}_${heroInfo.id}.png`;
     playerAvatarImg.alt = heroInfo.name;
   }
   const passivePill = document.getElementById("player-passive-pill");
@@ -3124,12 +3496,25 @@ function render() {
     endTurnBtn.disabled = !state.isPlayerTurn || state.gameOver || Boolean(state.reactionWindow);
   }
 
-  // Enemy Face-Down Hand
+  // Enemy Face-Down Hand (Fanned Arc) + Enemy Discard Preview
+  const enemyDiscardCountEl = document.getElementById("enemy-discard-count");
+  if (enemyDiscardCountEl) enemyDiscardCountEl.textContent = `${state.enemy.discard?.length || 0}`;
+  const enemyDiscardPreview = document.getElementById("enemy-discard-preview");
+  if (enemyDiscardPreview) {
+    const topEnDisc = state.enemy.discard?.[state.enemy.discard.length - 1];
+    enemyDiscardPreview.innerHTML = topEnDisc ? `<img src="${topEnDisc.art}" alt="${topEnDisc.name}" />` : "VACIO";
+  }
   const enemyHandEl = document.getElementById("enemy-hand");
   enemyHandEl.innerHTML = "";
-  for (let i = 0; i < state.enemy.handCount; i++) {
+  const enTotal = state.enemy.handCount;
+  for (let i = 0; i < enTotal; i++) {
     const back = document.createElement("div");
     back.className = "enemy-card-back";
+    const mid = (enTotal - 1) / 2;
+    const rot = ((i - mid) * 5.5).toFixed(1);
+    const arcY = (-Math.abs(i - mid) * 3.5).toFixed(1);
+    back.style.setProperty("--fan-rot", `${rot}deg`);
+    back.style.setProperty("--fan-y", `${arcY}px`);
     back.innerHTML = renderCardBack2LayerMarkup(state.enemy.cardBack, "Carta Rival");
     enemyHandEl.appendChild(back);
   }
@@ -3212,28 +3597,18 @@ function render() {
     visibleMarket.forEach(({ card, idx }) => {
       const price = getEffectiveGoldCost(card);
       const canAfford = state.isPlayerTurn && state.player.gold >= price;
-      const el = document.createElement("div");
-      el.className = `market-card type-${card.type} ${canAfford ? "" : "disabled"}`;
-      el.title = card.desc;
-      el.innerHTML = `
-        <div class="market-art">
-          <img src="${card.art}" alt="${card.name}" />
-        </div>
-        <div class="market-info">
-          <div class="market-card-top">
-            <span class="market-name">${card.name}</span>
-            <span class="gold-cost-pill"><img src="assets/ui/icon_coin.png" alt="Oro" />${price}</span>
-          </div>
-          <div class="market-meta-row">
-            <span class="market-type-tag">${card.type}</span>
-            <span class="market-summary">${card.shortTag}</span>
-          </div>
-        </div>
-      `;
+      const slotWrap = document.createElement("div");
+      slotWrap.className = `market-visual-slot ${canAfford ? "can-afford" : "disabled"}`;
+      const visualCard = createVisualCardEl(card, { mini: true });
+      const priceBadge = document.createElement("span");
+      priceBadge.className = "gold-cost-pill market-card-price-badge";
+      priceBadge.innerHTML = `<img src="assets/ui/icon_coin.png" alt="Credito" /><span>${price}</span>`;
+      slotWrap.appendChild(visualCard);
+      slotWrap.appendChild(priceBadge);
       if (canAfford) {
-        el.addEventListener("click", () => buyMarketCard(idx));
+        slotWrap.addEventListener("click", () => buyMarketCard(idx));
       }
-      marketRowEl.appendChild(el);
+      marketRowEl.appendChild(slotWrap);
     });
   }
 
@@ -3241,10 +3616,12 @@ function render() {
   const enemySlotsEl = document.getElementById("enemy-slots");
   enemySlotsEl.innerHTML = "";
   state.enemy.board.forEach((unit, idx) => {
+    const paintOwner = state.enemy.paint?.[idx] || "neutral";
+    const lockTurns = state.enemy.lockedSlots?.[idx] || 0;
     const slot = document.createElement("div");
-    slot.className = "unit-slot";
+    slot.className = `unit-slot slot-paint-${paintOwner} ${lockTurns > 0 ? "slot-locked" : ""}`;
     if (!unit) {
-      slot.textContent = "VACIO";
+      slot.textContent = lockTurns > 0 ? `BLOQUEADA (${lockTurns}T)` : (paintOwner === "enemy" ? "PINTADA" : "LIMPIA");
     } else {
       const targetable = state.selectedUnitIndex !== null;
       const isPvpAttacking = state.isPvp && state.pvpAttackingEnemySlot === idx;
@@ -3257,7 +3634,7 @@ function render() {
       if (unit.cute) enemyBadges.push('<span class="badge-icon" title="CUTE"><img src="assets/ui/badge_cute.png" alt="Cute" /></span>');
       if (unit.onDeath) enemyBadges.push('<span class="badge-icon" title="ULTIMO ALIENTO"><img src="assets/ui/badge_ondeath.png" alt="Al morir" /></span>');
       if (unit.upkeep) enemyBadges.push('<span class="badge-icon" title="MERCENARIO"><img src="assets/ui/badge_upkeep.png" alt="Mercenario" /></span>');
-      if (unit.stunned) enemyBadges.push('<span class="side-badge stunned" title="ATURDIDA: No ataca ni protege">ATURDIDA</span>');
+      if (unit.stunned) enemyBadges.push('<span class="badge-icon" title="ATURDIDA: No ataca ni protege"><img src="assets/ui/badge_stun.png" alt="Aturdida" /></span>');
       const enemyEquipsHtml = (unit.equips && unit.equips.length)
         ? `<div class="unit-equips-row">${unit.equips.map((eq) => `<span class="unit-equip-tag">${eq}</span>`).join("")}</div>`
         : "";
@@ -3286,10 +3663,12 @@ function render() {
   document.getElementById("player-hero-panel")?.classList.toggle("cute-heal-target", isCuteHealMode);
 
   state.player.board.forEach((unit, idx) => {
+    const paintOwner = state.player.paint?.[idx] || "neutral";
+    const lockTurns = state.player.lockedSlots?.[idx] || 0;
     const slot = document.createElement("div");
-    slot.className = "unit-slot";
+    slot.className = `unit-slot slot-paint-${paintOwner} ${lockTurns > 0 ? "slot-locked" : ""}`;
     if (!unit) {
-      slot.textContent = "VACIO";
+      slot.textContent = lockTurns > 0 ? `BLOQUEADA (${lockTurns}T)` : (paintOwner === "player" ? "PINTADA (+1 ATK)" : "VACIO");
     } else {
       const isSelected = state.selectedUnitIndex === idx;
       const isBlockerPick = Boolean(
@@ -3307,7 +3686,7 @@ function render() {
       if (unit.cute) badges.push('<span class="badge-icon" title="CUTE"><img src="assets/ui/badge_cute.png" alt="Cute" /></span>');
       if (unit.onDeath) badges.push('<span class="badge-icon" title="ULTIMO ALIENTO"><img src="assets/ui/badge_ondeath.png" alt="Al morir" /></span>');
       if (unit.upkeep) badges.push('<span class="badge-icon" title="MERCENARIO: 1 EN/Oro por turno"><img src="assets/ui/badge_upkeep.png" alt="Mercenario" /></span>');
-      if (unit.stunned) badges.push('<span class="side-badge stunned" title="ATURDIDA: No ataca ni protege">ATURDIDA</span>');
+      if (unit.stunned) badges.push('<span class="badge-icon" title="ATURDIDA: No ataca ni protege"><img src="assets/ui/badge_stun.png" alt="Aturdida" /></span>');
       if (isChosenBlocker) badges.push('<span class="badge-icon active-block" title="BLOQUEANDO"><img src="assets/ui/badge_guard.png" alt="Bloquea" /></span>');
       else if (unit.ready && !unit.stunned && !isBlockerPick) badges.push('<span class="badge-icon" title="LISTA PARA ATACAR"><img src="assets/ui/badge_haste.png" alt="Lista" /></span>');
       const equipsHtml = (unit.equips && unit.equips.length)
@@ -3345,9 +3724,10 @@ function render() {
     playerSlotsEl.appendChild(slot);
   });
 
-  // Player Hand (3D Parallax + Overflowing Side Badges + Reaction Glow)
+  // Player Hand (3D Parallax + Fanned Arc + Overflowing Side Badges + Reaction Glow)
   const handEl = document.getElementById("player-hand");
   handEl.innerHTML = "";
+  const plTotal = state.player.hand.length;
   state.player.hand.forEach((card, idx) => {
     const inReaction = Boolean(state.reactionWindow);
     const playable =
@@ -3355,13 +3735,20 @@ function render() {
       (state.isPlayerTurn || (inReaction && card.reaction));
     const el = document.createElement("div");
     el.className = `hand-card type-${card.type} faction-${card.faction || "neutral"} rarity-${card.rarity || "comun"} ${playable ? "" : "unplayable"} ${inReaction && playable ? "reaction-ready" : ""} ${card.ephemeral ? "ephemeral" : ""} ${card.justDrawn ? "deal-in" : ""}`;
+    const mid = (plTotal - 1) / 2;
+    const rot = ((idx - mid) * 4.8).toFixed(1);
+    const arcY = (Math.abs(idx - mid) * 5.2).toFixed(1);
+    el.style.setProperty("--fan-rot", `${rot}deg`);
+    el.style.setProperty("--fan-y", `${arcY}px`);
     if (card.justDrawn) {
       el.style.animationDelay = `${idx * 45}ms`;
       card.justDrawn = false;
     }
     const { iconsHtml } = buildCardStatIcons(card);
+    const factionIcon = getCardFactionIcon(card.faction);
     el.innerHTML = `
-      <div class="card-type-crest" title="Tipo: ${card.type}"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
+      <div class="card-type-crest"><img src="${getCardTypeIcon(card.type)}" alt="${card.type}" /></div>
+      ${factionIcon ? `<div class="card-faction-crest"><img src="${factionIcon}" alt="${card.faction}" /></div>` : ""}
       ${buildCardBadges(card)}
       <div class="card-banner card-banner-cost-only">
         <span class="energy-cost"><span>${card.cost}</span></span>
@@ -3696,6 +4083,10 @@ function initRestSparks() {
 function openRestScreen(isInitial = false) {
   stopTurnTimer();
   const screen = document.getElementById("rest-screen");
+  const restHeroImg = document.getElementById("rest-hero-img");
+  if (restHeroImg && runState.hero?.art) {
+    restHeroImg.src = runState.hero.art;
+  }
   const healBtn = document.getElementById("rest-heal-btn");
   const goldBtn = document.getElementById("rest-gold-btn");
   const nextLabel = document.getElementById("rest-next-stage");
@@ -4383,7 +4774,13 @@ function openEventModal() {
   titleEl.textContent = ev.title;
   descEl.textContent = ev.desc;
   const eventArtEl = document.getElementById("event-art-img");
-  if (eventArtEl) eventArtEl.src = `assets/ui/events/event_${ev.id}.png`;
+  if (eventArtEl) {
+    eventArtEl.onerror = () => {
+      eventArtEl.onerror = null;
+      eventArtEl.src = "assets/spraycasters/ui/event_urban_mystery.png";
+    };
+    eventArtEl.src = "assets/spraycasters/ui/event_urban_mystery.png";
+  }
   outcomeEl.classList.add("hidden");
   outcomeEl.textContent = "";
   contBtn.classList.add("hidden");
@@ -4484,6 +4881,19 @@ function openEventModal() {
 document.getElementById("open-map-btn")?.addEventListener("click", () => {
   if (!runState.mapNav) return;
   openMapScreen(Boolean(runState.inCombat));
+});
+
+document.getElementById("exit-run-btn")?.addEventListener("click", () => {
+  stopTurnTimer();
+  window.FTUE?.dismiss();
+  runState.inCombat = false;
+  document.getElementById("booster-modal")?.classList.add("hidden");
+  document.getElementById("shop-modal")?.classList.add("hidden");
+  document.getElementById("event-modal")?.classList.add("hidden");
+  document.getElementById("rest-screen")?.classList.add("hidden");
+  document.getElementById("map-screen")?.classList.add("hidden");
+  document.getElementById("game-over-modal")?.classList.add("hidden");
+  document.getElementById("title-screen")?.classList.remove("hidden");
 });
 
 // =============================================================================

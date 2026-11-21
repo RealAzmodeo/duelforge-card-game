@@ -2,7 +2,7 @@
 
 (function () {
   const lobby = {
-    selectedDeckId: "forja",
+    selectedDeckId: "bombers",
     myReady: false,
     rivalReady: false,
     rivalDeckId: null,
@@ -64,7 +64,7 @@
   }
 
   function createPvpSide(deckId, label) {
-    const id = STARTER_DECKS[deckId] ? deckId : "forja";
+    const id = STARTER_DECKS[deckId] ? deckId : "bombers";
     const deckDef = STARTER_DECKS[id];
     const heroDef = FACTION_HEROES[id];
     const deck = shuffle(deckDef.cards).map((cid) => createCardInstance(cid, false));
@@ -766,7 +766,7 @@
   function startMatchAsHost() {
     clearReactionTimers();
     const p1 = createPvpSide(lobby.selectedDeckId, "JUGADOR 1");
-    const p2 = createPvpSide(lobby.rivalDeckId || "forja", "JUGADOR 2");
+    const p2 = createPvpSide(lobby.rivalDeckId || "bombers", "JUGADOR 2");
     const marketPool = shuffle(MARKET_POOL_IDS).map((id) => createCardInstance(id, true));
     const marketRow = [];
     for (let i = 0; i < 4; i++) {
@@ -809,7 +809,7 @@
   // ================= LOBBY UI (REUSING OFFICIAL FACTION PILLARS & CARDS) =================
   function renderVsDeckDetail(deckIdOverride) {
     const id = deckIdOverride || lobby.selectedDeckId;
-    const deck = STARTER_DECKS[id] || STARTER_DECKS.forja;
+    const deck = STARTER_DECKS[id] || STARTER_DECKS.bombers;
     const f = FACTIONS[deck.id];
     const nameEl = document.getElementById("vs-detail-name");
     const tagEl = document.getElementById("vs-detail-tag");
@@ -856,7 +856,8 @@
     Object.values(STARTER_DECKS).forEach((deck) => {
       const f = FACTIONS[deck.id];
       const h = FACTION_HEROES[deck.id];
-      const heroArt = `assets/heroes/hero_${deck.id}_${h.id}.png`;
+      const heroArt = h.art || `assets/heroes/hero_${deck.id}_${h.id}.png`;
+      const deckArt = f.deckArt || `assets/decks/deck_${deck.id}.png`;
 
       const counts = {};
       const btn = document.createElement("button");
@@ -871,7 +872,7 @@
           <span class="deck-hp-text"><img class="deck-hp-ic" src="assets/ui/stat_hp.png" alt="" />${h.hp}</span>
         </div>
         <div class="deck-pillar-bottom">
-          <img class="deck-choice-img" src="assets/decks/deck_${deck.id}.png" alt="${deck.name}" />
+          <img class="deck-choice-img" src="${deckArt}" alt="${deck.name}" />
           <span class="deck-choice-name">${deck.name}</span>
           <span class="deck-hero-name">${h.name}</span>
           <span class="deck-choice-desc">${typeof formatHeroPassiveHtml === "function" ? formatHeroPassiveHtml(deck.id) : h.passive}</span>

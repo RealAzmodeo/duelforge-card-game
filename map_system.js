@@ -268,29 +268,29 @@
     if (type === "boss") {
       return {
         archetypeId: "senor_titan",
-        name: "SENOR TITAN",
-        hp: Math.round(25 * diff.hpMult),
-        avatar: "assets/heroes/enemy_senor_titan.png",
+        name: "THE OVERLORD (NUCLEO BLANCO)",
+        hp: Math.round(28 * diff.hpMult),
+        avatar: "assets/spraycasters/order/order_overlord.png",
         frame: "assets/ui/portrait_frame_obsidian.png",
-        arenaBg: "assets/ui/arena_bg_3.png",
-        cardBack: "assets/ui/card_back_enemy_3.png",
+        arenaBg: "assets/spraycasters/arenas/arena_nucleo_blanco.png",
+        cardBack: "assets/card_backs/back_league_6.png",
         baseAtk: 8,
         startArmor: 1 + diff.bonusStartArmor,
         baseEnergy: 2,
         scaleEnergyOnTurn3: isTitan,
         handSize: diff.handSize,
         passiveId: "boss_titan",
-        passiveLabel: "+1 SHD/turno | <50% HP: Fase Titan Desatado (+1 EN, +3 SHD, +1/+1 mesa)",
-        vanguardCardId: diff.id === "estandar" ? null : "escudero",
+        passiveLabel: "+1 SHD/turno | <50% HP: Protocolo Overlord (+1 EN, +3 SHD, +1/+1 mesa)",
+        vanguardCardId: diff.id === "estandar" ? null : "orden_enforcer",
         deckIds: buildDeck(
           [
-            "forja_maestro_yunque", "centinela_runico", "forja_escudero_acero",
-            "forja_hacha_titan", "yunque", "forja_aprendiz", "escudero", "ariete",
+            "orden_scrapper", "orden_scrapper", "orden_enforcer",
+            "forja_hacha_titan", "yunque", "escudero", "ariete",
             "forja_martillazo", "golpe", "escudo", "neutral_corazon_forja"
           ],
-          ["forja_coloso", "valquiria"]
+          ["orden_overlord", "orden_enforcer"]
         ),
-        summonName: "Coloso Hierro",
+        summonName: "Mecha Censura",
         summonAtk: 4,
         summonHp: 6,
         boosterTier: "legendario",
@@ -305,12 +305,12 @@
       if (tier2) {
         return {
           archetypeId: "guardian_obsidiana",
-          name: "GUARDIAN OBSIDIANA",
+          name: "THE ENFORCER (AZOTEAS)",
           hp: Math.round((28 + (floor - 5) * 2) * diff.hpMult),
-          avatar: "assets/heroes/enemy_guardian_obsidiana.png",
+          avatar: "assets/spraycasters/order/order_enforcer.png",
           frame: "assets/ui/portrait_frame_obsidian.png",
-          arenaBg: "assets/ui/arena_bg_3.png",
-          cardBack: "assets/ui/card_back_enemy_3.png",
+          arenaBg: "assets/spraycasters/arenas/arena_azoteas.png",
+          cardBack: "assets/card_backs/back_league_5.png",
           baseAtk: 8,
           startArmor: 1 + diff.bonusStartArmor,
           baseEnergy: 2,
@@ -318,17 +318,17 @@
           handSize: diff.handSize,
           passiveId: "elite_obsidiana",
           passiveLabel: "+1 SHD/turno y 2 DMG al Heroe al morir una unidad suya",
-          vanguardCardId: "escudero",
+          vanguardCardId: "orden_scrapper",
           deckIds: buildDeck(
             [
-              "centinela_runico", "forja_maestro_yunque",
+              "orden_enforcer", "orden_scrapper",
               "culto_acechador", "forja_coraza", "culto_capa",
               "drenaje", "culto_altar_sangre",
               "escudo", "escudo", "golpe", "golpe"
             ],
-            ["culto_verdugo", "culto_drenar_mente"]
+            ["orden_enforcer", "culto_drenar_mente"]
           ),
-          summonName: "Golem Obsidiana",
+          summonName: "Unidad Supresora",
           summonAtk: 3 + Math.floor(floor / 5),
           summonHp: 5 + Math.floor(floor / 4),
           boosterTier: "epico",
@@ -339,12 +339,12 @@
       }
       return {
         archetypeId: "comandante_cristal",
-        name: "COMANDANTE CRISTAL",
+        name: "THE ENFORCER (CALLEJON NEON)",
         hp: Math.round((24 + floor * 2) * diff.hpMult),
-        avatar: "assets/heroes/enemy_comandante_cristal.png",
+        avatar: "assets/spraycasters/order/order_enforcer.png",
         frame: "assets/ui/portrait_frame_crystal.png",
-        arenaBg: "assets/ui/arena_bg_2.png",
-        cardBack: "assets/ui/card_back_enemy_2.png",
+        arenaBg: "assets/spraycasters/arenas/arena_callejon.png",
+        cardBack: "assets/card_backs/back_league_4.png",
         baseAtk: 7,
         startArmor: 1 + diff.bonusStartArmor,
         baseEnergy: 2,
@@ -352,17 +352,17 @@
         handSize: diff.handSize,
         passiveId: "elite_cristal",
         passiveLabel: "Vanguardia inicial + 1 SHD y 1 DMG directo por turno",
-        vanguardCardId: "arcano_aprendiz",
+        vanguardCardId: "orden_scrapper",
         deckIds: buildDeck(
           [
-            "arcano_centinela_cristal", "culto_sombra", "culto_acechador",
+            "orden_enforcer", "orden_scrapper", "culto_acechador",
             "relampago", "goblin", "arcano_baston", "culto_capa",
             "descarga", "trampa_hielo", "hielo",
             "sobrecarga", "golpe", "escudo"
           ],
-          ["arcano_mago_tormenta", "rayo"]
+          ["orden_enforcer", "rayo"]
         ),
-        summonName: "Golem Cristal",
+        summonName: "Escuadron Riot",
         summonAtk: 3 + Math.floor(floor / 5),
         summonHp: 5 + Math.floor(floor / 4),
         boosterTier: "raro",
@@ -376,12 +376,12 @@
     if (floor <= 2) {
       return {
         archetypeId: "capitan_hierro",
-        name: "CAPITAN HIERRO",
+        name: "THE SCRAPPER (SKATEPARK)",
         hp: Math.round((23 + floor * 2) * diff.hpMult),
-        avatar: "assets/heroes/enemy_capitan_hierro.png",
+        avatar: "assets/spraycasters/order/order_scrapper.png",
         frame: "assets/ui/portrait_frame_iron.png",
-        arenaBg: "assets/ui/arena_bg.png",
-        cardBack: "assets/ui/card_back_enemy.png",
+        arenaBg: "assets/spraycasters/arenas/arena_skatepark.png",
+        cardBack: "assets/card_backs/back_league_1.png",
         baseAtk: 6 + Math.floor(floor / 2),
         startArmor: (floor === 0 ? 0 : floor) + diff.bonusStartArmor,
         baseEnergy: 2,
@@ -389,17 +389,17 @@
         handSize: diff.handSize,
         passiveId: "forja_armor",
         passiveArmorPerTurn: floor === 0 ? 0 : 1,
-        passiveLabel: floor === 0 ? "Disciplina de Hierro (2 jugadas/turno)" : "+1 SHD al inicio de su turno",
+        passiveLabel: floor === 0 ? "Brigada de Limpieza (2 jugadas/turno)" : "+1 SHD al inicio de su turno",
         vanguardCardId: null,
         deckIds: buildDeck(
           [
-            "forja_aprendiz", "forja_aprendiz", "escudero", "escudero",
+            "orden_scrapper", "orden_scrapper", "escudero", "escudero",
             "ariete", "golem", "forja_escudo_torre",
             "forja_martillazo", "golpe", "golpe", "escudo", "escudo"
           ],
-          ["forja_coraza", "forja_hacha_titan"]
+          ["forja_coraza", "orden_enforcer"]
         ),
-        summonName: "Centinela",
+        summonName: "Dron Limpiador",
         summonAtk: 3,
         summonHp: 4 + Math.floor(floor / 2),
         boosterTier: "basico",
@@ -412,12 +412,12 @@
     if (floor <= 6) {
       return {
         archetypeId: "maga_cristales",
-        name: "MAGA DE CRISTALES",
+        name: "THE SCRAPPER (METRO)",
         hp: Math.round((26 + (floor - 2) * 2) * diff.hpMult),
-        avatar: "assets/heroes/enemy_maga_cristales.png",
+        avatar: "assets/spraycasters/order/order_scrapper.png",
         frame: "assets/ui/portrait_frame_crystal.png",
-        arenaBg: "assets/ui/arena_bg_2.png",
-        cardBack: "assets/ui/card_back_enemy_2.png",
+        arenaBg: "assets/spraycasters/arenas/arena_metro.png",
+        cardBack: "assets/card_backs/back_league_2.png",
         baseAtk: 7 + Math.floor((floor - 2) / 2),
         startArmor: 1 + diff.bonusStartArmor,
         baseEnergy: 2,
@@ -428,13 +428,13 @@
         vanguardCardId: null,
         deckIds: buildDeck(
           [
-            "arcano_aprendiz", "arcano_aprendiz", "arcano_centinela_cristal",
+            "orden_scrapper", "orden_scrapper", "arcano_centinela_cristal",
             "cristalomante", "arcano_baston", "arcano_chispazo", "arcano_chispazo",
             "descarga", "descarga", "hielo", "arcano_congelacion", "arcano_orbe_eco", "escudo"
           ],
-          ["arcano_mago_tormenta", "rayo"]
+          ["orden_enforcer", "rayo"]
         ),
-        summonName: "Golem Cristal",
+        summonName: "Dron Quimico",
         summonAtk: 3,
         summonHp: 5 + Math.floor((floor - 2) / 3),
         boosterTier: "raro",
@@ -446,12 +446,12 @@
 
     return {
       archetypeId: "campeon_forja",
-      name: "CAMPEON DE FORJA",
+      name: "THE SCRAPPER (FABRIL)",
       hp: Math.round((27 + (floor - 6) * 2) * diff.hpMult),
-      avatar: "assets/heroes/enemy_campeon_forja.png",
+      avatar: "assets/spraycasters/order/order_scrapper.png",
       frame: "assets/ui/portrait_frame_obsidian.png",
-      arenaBg: "assets/ui/arena_bg_3.png",
-      cardBack: "assets/ui/card_back_enemy_3.png",
+      arenaBg: "assets/spraycasters/arenas/arena_fabril.png",
+      cardBack: "assets/card_backs/back_league_3.png",
       baseAtk: 8,
       startArmor: 1 + diff.bonusStartArmor,
       baseEnergy: 2,
@@ -462,14 +462,14 @@
       vanguardCardId: null,
       deckIds: buildDeck(
         [
-          "legion_explorador", "berserker", "ariete",
+          "orden_scrapper", "orden_enforcer", "ariete",
           "forja_aprendiz", "escudero", "forja_hacha_titan",
           "yunque", "legion_grito", "forja_martillazo",
           "golpe", "golpe", "escudo", "escudo", "forja_coraza"
         ],
-        ["legion_ariete_fuego", "drako"]
+        ["orden_enforcer", "drako"]
       ),
-      summonName: "Centinela Hierro",
+      summonName: "Brigada Vapor",
       summonAtk: 4,
       summonHp: 6,
       boosterTier: "epico",
