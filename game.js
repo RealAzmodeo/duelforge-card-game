@@ -3468,6 +3468,13 @@ function render() {
   document.getElementById("enemy-avatar-img").src = state.enemy.avatar;
   document.getElementById("enemy-hp").textContent = `${state.enemy.hp}/${state.enemy.maxHp}`;
   document.getElementById("enemy-armor").textContent = `${state.enemy.armor}`;
+  const enemyPoisonPill = document.getElementById("enemy-poison-pill");
+  const enemyPoisonVal = document.getElementById("enemy-poison");
+  if (enemyPoisonPill && enemyPoisonVal) {
+    const pVal = state.enemy.poison || 0;
+    enemyPoisonVal.textContent = `${pVal}`;
+    enemyPoisonPill.classList.toggle("hidden", pVal <= 0);
+  }
   const enemyIntentionEl = document.getElementById("enemy-intention");
   enemyIntentionEl.textContent = state.isPvp
     ? (state.isPlayerTurn ? "ESPERANDO TU JUGADA" : "TURNO DEL RIVAL")

@@ -6671,5 +6671,17 @@ body {
   font-weight: 900 !important;
 }
 
+.stat-pill.poison-pill {
+  background: rgba(20, 83, 45, 0.92) !important;
+  border: 1.5px solid #a3e635 !important;
+  color: #d9f99d !important;
+  box-shadow: 0 0 10px rgba(163, 230, 53, 0.45);
+}
+
+.stat-pill.poison-pill.hidden {
+  display: none !important;
+}
+
+
 
 
