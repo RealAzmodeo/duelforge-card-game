@@ -482,56 +482,56 @@
   const MAP_EVENTS = [
     {
       id: "altar_sangre",
-      title: "ALTAR DE SANGRE ANTIGUO",
-      desc: "Una estatua de obsidiana ofrece poder a cambio de vitalidad.",
+      title: "MURAL DE TINTA CARMESI",
+      desc: "Un mural callejero prohibido ofrece energia a cambio de vitalidad.",
       choices: [
-        { label: "Ofrendar sangre (-6 HP -> +45 Oro)", type: "blood_gold", hpDelta: -6, goldDelta: 45 },
-        { label: "Descansar junto al altar (+5 HP)", type: "heal", hpDelta: 5 }
+        { label: "Ofrendar tinta (-6 HP -> +45 Oro)", type: "blood_gold", hpDelta: -6, goldDelta: 45 },
+        { label: "Descansar junto al mural (+5 HP)", type: "heal", hpDelta: 5 }
       ]
     },
     {
       id: "mercader_errante",
-      title: "MERCADER ERRANTE",
-      desc: "Un viajero encapuchado ofrece ampliar tu mochila tactica.",
+      title: "BROKER DE MOCHILA TACTICA",
+      desc: "Un contacto encapuchado ofrece ampliar tu espacio de latas y cartas.",
       choices: [
-        { label: "Comprar espacio (+1 Slot Banquillo por 30 Oro)", type: "buy_slot", goldCost: 30, slotDelta: 1 },
-        { label: "Pedir provisiones (+10 Oro)", type: "gain_gold", goldDelta: 10 }
+        { label: "Ampliar mochila (+1 Slot Banquillo por 30 Oro)", type: "buy_slot", goldCost: 30, slotDelta: 1 },
+        { label: "Pedir suministros (+10 Oro)", type: "gain_gold", goldDelta: 10 }
       ]
     },
     {
       id: "forja_olvidada",
-      title: "FORJA OLVIDADA",
-      desc: "Las brasas aun arden. Puedes templar tu equipo o recolectar chatarra.",
+      title: "TALLER CLANDESTINO DE VALVULAS",
+      desc: "Un banco de presion oculto en el callejon. Puedes reforzar tu equipo.",
       choices: [
-        { label: "Templar armadura (+4 HP Maximos por 25 Oro)", type: "buy_maxhp", goldCost: 25, maxHpDelta: 4 },
-        { label: "Recolectar lingotes (+2 Oro inicial prox. combate)", type: "bonus_start_gold", bonusGold: 2 }
+        { label: "Reforzar chaleco (+4 HP Maximos por 25 Oro)", type: "buy_maxhp", goldCost: 25, maxHpDelta: 4 },
+        { label: "Recolectar boquillas (+2 Oro inicial prox. combate)", type: "bonus_start_gold", bonusGold: 2 }
       ]
     },
     {
       id: "fuente_arcana",
-      title: "FUENTE ARCANA",
-      desc: "Agua luminosa brota entre ruinas selladas.",
+      title: "HIDRANTE DE NEON PURO",
+      desc: "Pintura luminosa brota a presion entre el asfalto agrietado.",
       choices: [
-        { label: "Beber del manantial (+10 HP)", type: "heal", hpDelta: 10 },
+        { label: "Recargar energia del hidrante (+10 HP)", type: "heal", hpDelta: 10 },
         { label: "Sumergir una carta (+1 Carta Rara al mazo, -4 HP)", type: "draft_rare", hpDelta: -4 }
       ]
     },
     {
       id: "cofre_trampeado",
-      title: "COFRE SELLADO",
-      desc: "Un cofre reforzado con runas de peligro.",
+      title: "MALETIN BLINDADO DE EL ORDEN",
+      desc: "Un maletin corporativo sellado con candado digital rojo.",
       choices: [
-        { label: "Forzar cerradura (70% +50 Oro / 30% -7 HP)", type: "gamble_chest" },
+        { label: "Hackear cerradura (70% +50 Oro / 30% -7 HP)", type: "gamble_chest" },
         { label: "Dejarlo intacto (+3 HP)", type: "heal", hpDelta: 3 }
       ]
     },
     {
       id: "biblioteca_oculta",
-      title: "BIBLIOTECA OCULTA",
-      desc: "Pergaminos intactos esperan entre el polvo.",
+      title: "ARCHIVO DE STENCILS PROHIBIDOS",
+      desc: "Planos y plantillas clandestinas esperan en un cajon oculto.",
       choices: [
-        { label: "Tomar un pergamino (Carta Comun/Rara gratis)", type: "free_card" },
-        { label: "Descifrar tomo antiguo (Carta Epica por 25 Oro)", type: "buy_epic", goldCost: 25 }
+        { label: "Tomar una plantilla (Carta Comun/Rara gratis)", type: "free_card" },
+        { label: "Descifrar plano maestro (Carta Epica por 25 Oro)", type: "buy_epic", goldCost: 25 }
       ]
     }
   ];

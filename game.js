@@ -655,7 +655,7 @@ if (Array.isArray(window.CUSTOM_CARDS)) {
 const SPRAY_ACTIVE_FACTIONS = new Set(["bombers", "weavers", "vanguard", "rollers", "acids", "sugar_riot"]);
 for (let i = MARKET_POOL_IDS.length - 1; i >= 0; i--) {
   const c = CARD_CATALOG[MARKET_POOL_IDS[i]];
-  if (!c || !SPRAY_ACTIVE_FACTIONS.has(c.faction)) {
+  if (!c || (!SPRAY_ACTIVE_FACTIONS.has(c.faction) && !(c.faction === "neutral" && c.marketOnly))) {
     MARKET_POOL_IDS.splice(i, 1);
   }
 }
@@ -1976,6 +1976,7 @@ function rollBoosterIds(tier) {
     const targetRarity = tier.rarities[Math.floor(Math.random() * tier.rarities.length)];
     let candidates = MARKET_POOL_IDS.filter(
       (id) =>
+        !CARD_CATALOG[id].marketOnly &&
         CARD_CATALOG[id].rarity === targetRarity &&
         !pickedIds.includes(id) &&
         !(CARD_CATALOG[id].rarity === "legendaria" && runState.permanentDeck.includes(id)) &&
@@ -1984,6 +1985,7 @@ function rollBoosterIds(tier) {
     if (candidates.length === 0) {
       candidates = MARKET_POOL_IDS.filter(
         (id) =>
+          !CARD_CATALOG[id].marketOnly &&
           CARD_CATALOG[id].rarity === targetRarity &&
           !pickedIds.includes(id) &&
           !(CARD_CATALOG[id].rarity === "legendaria" && runState.permanentDeck.includes(id))
@@ -1992,6 +1994,7 @@ function rollBoosterIds(tier) {
     if (candidates.length === 0) {
       candidates = MARKET_POOL_IDS.filter(
         (id) =>
+          !CARD_CATALOG[id].marketOnly &&
           !pickedIds.includes(id) &&
           !(CARD_CATALOG[id].rarity === "legendaria" && runState.permanentDeck.includes(id))
       );
@@ -4786,7 +4789,7 @@ function openEventModal() {
       eventArtEl.onerror = null;
       eventArtEl.src = "assets/spraycasters/ui/event_urban_mystery.png";
     };
-    eventArtEl.src = "assets/spraycasters/ui/event_urban_mystery.png";
+    eventArtEl.src = `assets/spraycasters/events/event_${ev.id}.png`;
   }
   outcomeEl.classList.add("hidden");
   outcomeEl.textContent = "";
