@@ -767,7 +767,7 @@ body {
   overflow: hidden;
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(2, 6, 23, 0.05) 55%, rgba(2, 6, 23, 0.62) 100%),
-    var(--card-bg, url("assets/ui/card_bg_neutral.png"));
+    var(--card-bg, url("assets/spraycasters/cards_bg/card_bg_orden.png"));
   background-size: 100% 100%, 120% 116%;
   background-position: center, center;
   background-repeat: no-repeat;
@@ -881,13 +881,20 @@ body {
   color: inherit;
 }
 
-.hand-card.faction-forja { --card-bg: url("assets/ui/card_bg_forja.png"); }
-.hand-card.faction-arcano { --card-bg: url("assets/ui/card_bg_arcano.png"); }
-.hand-card.faction-sindicato { --card-bg: url("assets/ui/card_bg_sindicato.png"); }
-.hand-card.faction-legion { --card-bg: url("assets/ui/card_bg_legion.png"); }
-.hand-card.faction-culto { --card-bg: url("assets/ui/card_bg_culto.png"); }
-.hand-card.faction-pastel { --card-bg: url("assets/ui/card_bg_pastel.png"); }
-.hand-card.faction-neutral { --card-bg: url("assets/ui/card_bg_neutral.png"); }
+.hand-card.faction-bombers { --card-bg: url("assets/spraycasters/cards_bg/card_bg_bombers.png"); }
+.hand-card.faction-weavers { --card-bg: url("assets/spraycasters/cards_bg/card_bg_weavers.png"); }
+.hand-card.faction-vanguard { --card-bg: url("assets/spraycasters/cards_bg/card_bg_vanguard.png"); }
+.hand-card.faction-rollers { --card-bg: url("assets/spraycasters/cards_bg/card_bg_rollers.png"); }
+.hand-card.faction-acids { --card-bg: url("assets/spraycasters/cards_bg/card_bg_acids.png"); }
+.hand-card.faction-sugar_riot { --card-bg: url("assets/spraycasters/cards_bg/card_bg_sugar_riot.png"); }
+.hand-card.faction-orden { --card-bg: url("assets/spraycasters/cards_bg/card_bg_orden.png"); }
+.hand-card.faction-forja { --card-bg: url("assets/spraycasters/cards_bg/card_bg_vanguard.png"); }
+.hand-card.faction-arcano { --card-bg: url("assets/spraycasters/cards_bg/card_bg_weavers.png"); }
+.hand-card.faction-sindicato { --card-bg: url("assets/spraycasters/cards_bg/card_bg_rollers.png"); }
+.hand-card.faction-legion { --card-bg: url("assets/spraycasters/cards_bg/card_bg_bombers.png"); }
+.hand-card.faction-culto { --card-bg: url("assets/spraycasters/cards_bg/card_bg_acids.png"); }
+.hand-card.faction-pastel { --card-bg: url("assets/spraycasters/cards_bg/card_bg_sugar_riot.png"); }
+.hand-card.faction-neutral { --card-bg: url("assets/spraycasters/cards_bg/card_bg_orden.png"); }
 
 .hand-card.type-Unidad {
   --card-frame: url("assets/ui/frame_unidad.png");
