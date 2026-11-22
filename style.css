@@ -6657,6 +6657,142 @@ body {
   box-shadow: 0 0 14px rgba(0, 229, 255, 0.45) !important;
 }
 
+/* =============================================================================
+   TITLE SCREEN: GRAFFITI WALL OVERHAUL
+   ============================================================================= */
+.title-screen {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(9, 13, 22, 0.16) 0%, rgba(2, 6, 23, 0.78) 100%),
+    url("assets/spraycasters/ui/title_graffiti_wall.png") center/cover no-repeat !important;
+}
+
+.title-content {
+  gap: 16px !important;
+  max-width: 780px;
+}
+
+.title-logo {
+  width: clamp(360px, 46vw, 660px) !important;
+  max-height: 44vh !important;
+  animation: none !important;
+  filter:
+    drop-shadow(0 6px 0 rgba(2, 6, 23, 0.92))
+    drop-shadow(0 0 34px rgba(0, 229, 255, 0.38))
+    drop-shadow(0 0 60px rgba(255, 42, 133, 0.25)) !important;
+  transform: rotate(-1.5deg);
+}
+
+.title-tagline {
+  display: inline-block;
+  padding: 6px 20px;
+  background: rgba(9, 13, 22, 0.84);
+  border: 2px solid #00e5ff;
+  border-radius: 6px;
+  color: #f8fafc !important;
+  letter-spacing: 3px !important;
+  font-size: clamp(12px, 1.15vw, 17px) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.75), 0 0 16px rgba(0, 229, 255, 0.3);
+  transform: rotate(-0.8deg);
+  -webkit-text-stroke: 0 !important;
+}
+
+.title-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.title-screen .play-hero-btn,
+.title-screen .collection-entry-btn {
+  position: relative;
+  border-image: none !important;
+  border-width: 3px !important;
+  border-style: solid !important;
+  border-radius: 12px !important;
+  padding: 12px 34px !important;
+  min-width: 280px !important;
+  min-height: 54px !important;
+  font-family: var(--font-display) !important;
+  font-weight: 900 !important;
+  letter-spacing: 2px !important;
+  text-shadow: 0 2px 0 #020617 !important;
+  transition: transform 0.16s cubic-bezier(0.2, 0.9, 0.3, 1), filter 0.16s ease, box-shadow 0.16s ease !important;
+}
+
+.title-screen .play-hero-btn::before,
+.title-screen .collection-entry-btn::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 16px;
+  width: 34px;
+  height: 11px;
+  background: rgba(234, 216, 177, 0.84);
+  border: 1px solid rgba(120, 113, 108, 0.6);
+  border-radius: 2px;
+  transform: rotate(-5deg);
+  pointer-events: none;
+}
+
+.title-screen .play-hero-btn::after,
+.title-screen .collection-entry-btn::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 16px;
+  width: 30px;
+  height: 11px;
+  background: rgba(234, 216, 177, 0.84);
+  border: 1px solid rgba(120, 113, 108, 0.6);
+  border-radius: 2px;
+  transform: rotate(6deg);
+  pointer-events: none;
+}
+
+#play-btn.play-hero-btn {
+  background: linear-gradient(135deg, #ff4d2d 0%, #f97316 100%) !important;
+  border-color: #fde047 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 0 #7c2d12, 0 14px 28px rgba(255, 77, 45, 0.45) !important;
+  transform: rotate(-1.2deg);
+}
+
+#play-btn.play-hero-btn:hover {
+  transform: translateY(-4px) scale(1.06) rotate(0deg) !important;
+  box-shadow: 0 10px 0 #7c2d12, 0 0 32px rgba(255, 183, 3, 0.85) !important;
+}
+
+#play-vs-btn.play-hero-btn--vs {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%) !important;
+  border-color: #67e8f9 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 0 #1e3a8a, 0 14px 28px rgba(0, 229, 255, 0.35) !important;
+  transform: rotate(1deg);
+}
+
+#play-vs-btn.play-hero-btn--vs:hover {
+  transform: translateY(-4px) scale(1.06) rotate(0deg) !important;
+  box-shadow: 0 10px 0 #1e3a8a, 0 0 32px rgba(0, 229, 255, 0.85) !important;
+}
+
+#open-collection-btn.collection-entry-btn {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+  border-color: #a3e635 !important;
+  color: #ecfccb !important;
+  font-size: 13px !important;
+  min-height: 46px !important;
+  box-shadow: 0 6px 0 #020617, 0 12px 24px rgba(0, 0, 0, 0.7) !important;
+  transform: rotate(-0.6deg);
+}
+
+#open-collection-btn.collection-entry-btn:hover {
+  transform: translateY(-3px) scale(1.05) rotate(0deg) !important;
+  box-shadow: 0 8px 0 #020617, 0 0 24px rgba(163, 230, 53, 0.65) !important;
+}
+
+
 .unit-slot.slot-locked {
   background:
     repeating-linear-gradient(
