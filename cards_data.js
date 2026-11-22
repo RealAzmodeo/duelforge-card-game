@@ -1228,13 +1228,13 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/bombers_goblin_pyro.png",
     cost: 2,
     goldCost: 3,
-    atk: 4,
+    atk: 3,
     hp: 3,
     guard: false,
     haste: true,
     onDeath: { damageEnemyHero: 3 },
-    shortTag: "4/3 FRESCA AL MORIR 3 DMG",
-    desc: "[PINTURA FRESCA] [ULTIMO ALIENTO] 4/3. Al morir: 3 DMG al Heroe rival."
+    shortTag: "3/3 FRESCA AL MORIR 3 DMG",
+    desc: "[PINTURA FRESCA] [ULTIMO ALIENTO] 3/3. Al morir: 3 DMG al Heroe rival."
   },
   {
     id: "bombers_flame_elemental",
@@ -1245,13 +1245,13 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/bombers_flame_elemental.png",
     cost: 3,
     goldCost: 5,
-    atk: 6,
+    atk: 5,
     hp: 4,
     guard: false,
     haste: true,
     pierce: true,
-    shortTag: "6/4 FRESCA PERFORAR",
-    desc: "[PINTURA FRESCA] [PERFORAR] 6/4. Alto burst, poca resistencia."
+    shortTag: "5/4 FRESCA PERFORAR",
+    desc: "[PINTURA FRESCA] [PERFORAR] 5/4. Alto burst, poca resistencia."
   },
   {
     id: "bombers_blaze_kicks",
@@ -1289,9 +1289,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     duration: 5,
-    effects: { damageEnemyHero: 3 },
-    shortTag: "5T: 3 DMG AL RIVAL",
-    desc: "[RELIQUIA 5T] Cada turno: 3 DMG explosivos al Heroe rival."
+    effects: { damageEnemyHero: 2 },
+    shortTag: "5T: 2 DMG AL RIVAL",
+    desc: "[RELIQUIA 5T] Cada turno: 2 DMG explosivos al Heroe rival."
   },
   {
     id: "bombers_bubble_fireball",
@@ -1303,9 +1303,9 @@ window.CUSTOM_CARDS = [
     cost: 1,
     goldCost: 2,
     vfxType: "fireball",
-    shortTag: "4 DMG DIRECTO",
-    desc: "Inflige 4 DMG igneos a una unidad rival o al Heroe.",
-    effects: { damageEnemyUnitOrHero: 4 }
+    shortTag: "3 DMG DIRECTO",
+    desc: "Inflige 3 DMG igneos a una unidad rival o al Heroe.",
+    effects: { damageEnemyUnitOrHero: 3 }
   },
   {
     id: "bombers_crossfire_burst",
@@ -1317,9 +1317,9 @@ window.CUSTOM_CARDS = [
     cost: 3,
     goldCost: 4,
     vfxType: "meteor",
-    shortTag: "4 DMG A TODOS",
-    desc: "4 DMG explosivos a todas las unidades rivales y al Heroe.",
-    effects: { damageAllEnemiesAndHero: 4 }
+    shortTag: "2 DMG A TODOS",
+    desc: "2 DMG explosivos a todas las unidades rivales y al Heroe.",
+    effects: { damageAllEnemiesAndHero: 2 }
   },
   {
     id: "bombers_overpressure",
@@ -1539,13 +1539,13 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/weavers_cyber_oracle.png",
     cost: 1,
     goldCost: 2,
-    atk: 2,
+    atk: 3,
     hp: 4,
     guard: false,
     haste: false,
     onPlayDiscardEnemy: 1,
-    shortTag: "2/4 SABOTAJE -1 CARTA",
-    desc: "[SABOTAJE] 2/4. Al entrar, el rival descarta 1 carta planeada."
+    shortTag: "3/4 SABOTAJE -1 CARTA",
+    desc: "[SABOTAJE] 3/4. Al entrar, el rival descarta 1 carta planeada."
   },
   {
     id: "weavers_arcane_hacker",
@@ -1556,13 +1556,13 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/weavers_arcane_hacker.png",
     cost: 2,
     goldCost: 3,
-    atk: 3,
+    atk: 4,
     hp: 5,
     guard: false,
     haste: false,
     onDeath: { draw: 2 },
-    shortTag: "3/5 AL MORIR +2 CARTAS",
-    desc: "[ULTIMO ALIENTO] 3/5. Al morir, robas 2 cartas."
+    shortTag: "4/5 AL MORIR +2 CARTAS",
+    desc: "[ULTIMO ALIENTO] 4/5. Al morir, robas 2 cartas."
   },
   {
     id: "weavers_cyber_spirit",
@@ -1571,7 +1571,7 @@ window.CUSTOM_CARDS = [
     faction: "weavers",
     rarity: "epica",
     art: "assets/spraycasters/cards/weavers_cyber_spirit.png",
-    cost: 3,
+    cost: 2,
     goldCost: 4,
     atk: 4,
     hp: 5,
@@ -1590,9 +1590,9 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/weavers_data_blade.png",
     cost: 2,
     goldCost: 3,
-    equipStats: { discardOnHit: 1, drawOnHit: 1 },
-    shortTag: "AL GOLPEAR: -1 RIVAL +1 CARTA",
-    desc: "[EQUIPO] Al atacar: el rival descarta 1 carta planeada y tu robas 1 carta."
+    equipStats: { atk: 2, discardOnHit: 1, drawOnHit: 1 },
+    shortTag: "+2 ATK | -1 RIVAL +1 CARTA",
+    desc: "[EQUIPO] +2 ATK. Al atacar: el rival descarta 1 carta planeada y tu robas 1 carta."
   },
   {
     id: "weavers_stylus_gauntlet",
@@ -1617,9 +1617,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     duration: 5,
-    effects: { draw: 1, armor: 2, damageEnemyHero: 1 },
-    shortTag: "5T: +1 CARTA +2 SHD 1 DMG",
-    desc: "[RELIQUIA 5T] Cada turno: robas 1 carta, +2 SHD y 1 DMG arcano."
+    effects: { draw: 1, armor: 2, damageEnemyHero: 3 },
+    shortTag: "5T: +1 CARTA +2 SHD 3 DMG",
+    desc: "[RELIQUIA 5T] Cada turno: robas 1 carta, +2 SHD y 3 DMG arcano."
   },
   {
     id: "weavers_redirect_portal",
@@ -1631,9 +1631,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 3,
     vfxType: "beam",
-    shortTag: "4 DMG + ATURDIR + SABOTAJE",
-    desc: "4 DMG a unidad, la ATURDE y hace descartar 1 carta rival.",
-    effects: { damageEnemyUnitOrHero: 4, stunEnemyUnit: true, discardEnemy: 1 }
+    shortTag: "5 DMG + ATURDIR + SABOTAJE",
+    desc: "5 DMG a unidad, la ATURDE y hace descartar 1 carta rival.",
+    effects: { damageEnemyUnitOrHero: 5, stunEnemyUnit: true, discardEnemy: 1 }
   },
   {
     id: "weavers_circuit_draw",
@@ -1691,12 +1691,12 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/vanguard_bulldog_vet.png",
     cost: 2,
     goldCost: 3,
-    atk: 3,
+    atk: 4,
     hp: 7,
     guard: true,
     haste: false,
-    shortTag: "3/7 GUARDIA BLINDAJE",
-    desc: "[GUARDIA] 3/7. Orco militar musculoso con botas pesadas y escudo."
+    shortTag: "4/7 GUARDIA BLINDAJE",
+    desc: "[GUARDIA] 4/7. Orco militar musculoso con botas pesadas y escudo."
   },
   {
     id: "vanguard_beetle_knight",
@@ -1707,12 +1707,12 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/vanguard_beetle_knight.png",
     cost: 3,
     goldCost: 5,
-    atk: 5,
+    atk: 6,
     hp: 9,
     guard: true,
     haste: false,
-    shortTag: "5/9 GUARDIA MURO",
-    desc: "[GUARDIA] 5/9. Capitan orco blindado con canones de remaches."
+    shortTag: "6/9 GUARDIA MURO",
+    desc: "[GUARDIA] 6/9. Capitan orco blindado con canones de remaches."
   },
   {
     id: "vanguard_sign_shield",
@@ -1806,15 +1806,15 @@ window.CUSTOM_CARDS = [
     faction: "rollers",
     rarity: "comun",
     art: "assets/spraycasters/cards/rollers_orc_heavy.png",
-    cost: 2,
-    goldCost: 3,
-    atk: 4,
-    hp: 6,
+    cost: 1,
+    goldCost: 2,
+    atk: 3,
+    hp: 5,
     guard: false,
     haste: false,
     pierce: true,
-    shortTag: "4/6 PERFORAR",
-    desc: "[PERFORAR] 4 ATK / 6 HP. Goblin ricachon con rodillo dorado."
+    shortTag: "3/5 PERFORAR",
+    desc: "[PERFORAR] 3 ATK / 5 HP. Goblin ricachon con rodillo dorado."
   },
   {
     id: "rollers_concrete_troll",
@@ -1823,15 +1823,15 @@ window.CUSTOM_CARDS = [
     faction: "rollers",
     rarity: "rara",
     art: "assets/spraycasters/cards/rollers_concrete_troll.png",
-    cost: 3,
+    cost: 2,
     goldCost: 4,
-    atk: 6,
-    hp: 8,
+    atk: 4,
+    hp: 7,
     guard: false,
     haste: false,
     pierce: true,
-    shortTag: "6/8 PERFORAR PESADO",
-    desc: "[PERFORAR] 6/8. Coloso pesado de obra y pintura esmeralda."
+    shortTag: "4/7 PERFORAR PESADO",
+    desc: "[PERFORAR] 4/7. Coloso pesado de obra y pintura esmeralda."
   },
   {
     id: "rollers_rhino_bruiser",
@@ -1840,15 +1840,15 @@ window.CUSTOM_CARDS = [
     faction: "rollers",
     rarity: "epica",
     art: "assets/spraycasters/cards/rollers_rhino_bruiser.png",
-    cost: 4,
+    cost: 3,
     goldCost: 6,
-    atk: 8,
-    hp: 10,
+    atk: 7,
+    hp: 9,
     guard: false,
     haste: false,
     pierce: true,
-    shortTag: "8/10 OVERRUN",
-    desc: "[PERFORAR] 8/10. Titan millonario con rodillos de oro dobles."
+    shortTag: "7/9 OVERRUN",
+    desc: "[PERFORAR] 7/9. Titan millonario con rodillos de oro dobles."
   },
   {
     id: "rollers_telescopic_roller",
@@ -1886,9 +1886,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     duration: 5,
-    effects: { damageEnemyHero: 2, armor: 2, gold: 1 },
-    shortTag: "5T: 2 DMG +2 SHD +1 ORO",
-    desc: "[RELIQUIA 5T] Cada turno: 2 DMG al rival, +2 SHD y +1 Oro."
+    effects: { damageEnemyHero: 3, armor: 2, gold: 1 },
+    shortTag: "5T: 3 DMG +2 SHD +1 ORO",
+    desc: "[RELIQUIA 5T] Cada turno: 3 DMG al rival, +2 SHD y +1 Oro."
   },
   {
     id: "rollers_monumental_sweep",
@@ -1901,8 +1901,8 @@ window.CUSTOM_CARDS = [
     goldCost: 4,
     vfxType: "meteor",
     shortTag: "4 DMG A TODOS",
-    desc: "Ola gigante de pintura esmeralda: 4 DMG a todas las unidades rivales.",
-    effects: { damageAllUnitsOnly: 4 }
+    desc: "Ola gigante de pintura esmeralda: 4 DMG a unidades y Heroe rival.",
+    effects: { damageAllEnemiesAndHero: 4 }
   },
   {
     id: "rollers_wall_conquest",
@@ -1914,9 +1914,9 @@ window.CUSTOM_CARDS = [
     cost: 1,
     goldCost: 2,
     vfxType: "fireball",
-    shortTag: "4 DMG +3 ORO",
-    desc: "Sella el distrito con corona de oro: 4 DMG y +3 Oro.",
-    effects: { damageEnemyUnitOrHero: 4, gold: 3 }
+    shortTag: "6 DMG +3 ORO",
+    desc: "Sella el distrito con corona de oro: 6 DMG y +3 Oro.",
+    effects: { damageEnemyUnitOrHero: 6, gold: 3 }
   },
   {
     id: "rollers_emerald_tide",
@@ -1928,9 +1928,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     vfxType: "meteor",
-    shortTag: "5 DMG +1 CARTA +2 ORO",
-    desc: "5 DMG a unidad o Heroe, robas 1 carta y ganas +2 Oro.",
-    effects: { damageEnemyUnitOrHero: 5, draw: 1, gold: 2 }
+    shortTag: "7 DMG +1 CARTA +2 ORO",
+    desc: "7 DMG a unidad o Heroe, robas 1 carta y ganas +2 Oro.",
+    effects: { damageEnemyUnitOrHero: 7, draw: 1, gold: 2 }
   },
 
   // ================= SPRAY CASTERS: LOS ACIDOS (9 CARTAS - VENENO ACUMULATIVO & DRENAJE) =================
@@ -1948,9 +1948,9 @@ window.CUSTOM_CARDS = [
     guard: false,
     haste: false,
     stealth: true,
-    poisonOnHit: 2,
-    shortTag: "2/4 ESCABULLIRSE +2 VENENO",
-    desc: "[ESCABULLIRSE] 2/4. Aplica +2 Veneno al golpear (ignora escudo)."
+    poisonOnHit: 1,
+    shortTag: "2/4 ESCABULLIRSE +1 VENENO",
+    desc: "[ESCABULLIRSE] 2/4. Aplica +1 Veneno al golpear (ignora escudo)."
   },
   {
     id: "acids_slime_lurker",
@@ -1965,9 +1965,9 @@ window.CUSTOM_CARDS = [
     hp: 5,
     guard: false,
     haste: false,
-    onDeath: { poisonEnemy: 4 },
-    shortTag: "3/5 AL MORIR +4 VENENO",
-    desc: "[ULTIMO ALIENTO] 3/5. Al morir, aplica +4 Veneno al Heroe rival."
+    onDeath: { poisonEnemy: 3 },
+    shortTag: "3/5 AL MORIR +3 VENENO",
+    desc: "[ULTIMO ALIENTO] 3/5. Al morir, aplica +3 Veneno al Heroe rival."
   },
   {
     id: "acids_ink_wraith",
@@ -1978,15 +1978,15 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/acids_ink_wraith.png",
     cost: 3,
     goldCost: 5,
-    atk: 4,
+    atk: 6,
     hp: 6,
     guard: false,
     haste: false,
     stealth: true,
     poisonOnHit: 3,
     onDeath: { draw: 1 },
-    shortTag: "4/6 SIGILO +3 VENENO",
-    desc: "[ESCABULLIRSE] [ULTIMO ALIENTO] 4/6. +3 Veneno al golpear y robas 1 al morir."
+    shortTag: "6/6 SIGILO +3 VENENO",
+    desc: "[ESCABULLIRSE] [ULTIMO ALIENTO] 6/6. +3 Veneno al golpear y robas 1 al morir."
   },
   {
     id: "acids_etch_mop",
@@ -1997,9 +1997,9 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/acids_etch_mop.png",
     cost: 1,
     goldCost: 2,
-    equipStats: { poisonOnHit: 3 },
-    shortTag: "+3 VENENO AL GOLPEAR",
-    desc: "[EQUIPO] Aplica +3 acumulaciones de Veneno en cada ataque (ignora escudo)."
+    equipStats: { poisonOnHit: 2 },
+    shortTag: "+2 VENENO AL GOLPEAR",
+    desc: "[EQUIPO] Aplica +2 acumulaciones de Veneno en cada ataque (ignora escudo)."
   },
   {
     id: "acids_gas_mask",
@@ -2024,9 +2024,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     duration: 5,
-    effects: { poisonEnemy: 2, heal: 2 },
-    shortTag: "5T: +2 VENENO +2 HP",
-    desc: "[RELIQUIA 5T] Cada turno: aplica +2 Veneno al rival y curas +2 HP."
+    effects: { poisonEnemy: 1, heal: 1 },
+    shortTag: "5T: +1 VENENO +1 HP",
+    desc: "[RELIQUIA 5T] Cada turno: aplica +1 Veneno al rival y curas +1 HP."
   },
   {
     id: "acids_corrosive_splash",
@@ -2038,9 +2038,9 @@ window.CUSTOM_CARDS = [
     cost: 1,
     goldCost: 2,
     vfxType: "fireball",
-    shortTag: "2 DMG + 4 VENENO",
-    desc: "Corroe blindaje: 2 DMG directo y aplica +4 Veneno al Heroe rival.",
-    effects: { damageEnemyUnitOrHero: 2, poisonEnemy: 4 }
+    shortTag: "5 DMG + 2 VENENO",
+    desc: "Corroe blindaje: 5 DMG directo y aplica +2 Veneno al Heroe rival.",
+    effects: { damageEnemyUnitOrHero: 5, poisonEnemy: 2 }
   },
   {
     id: "acids_pasteup_revive",
@@ -2052,9 +2052,9 @@ window.CUSTOM_CARDS = [
     cost: 1,
     goldCost: 3,
     vfxType: "beam",
-    shortTag: "+5 HP +1 CARTA",
-    desc: "Recupera energia del subsuelo: curas +5 HP y robas 1 carta.",
-    effects: { heal: 5, draw: 1 }
+    shortTag: "+2 HP +1 CARTA",
+    desc: "Recupera energia del subsuelo: curas +2 HP y robas 1 carta.",
+    effects: { heal: 2, draw: 1 }
   },
   {
     id: "acids_toxic_cloud",
@@ -2066,9 +2066,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     vfxType: "meteor",
-    shortTag: "3 DMG A TODOS + 4 VENENO",
-    desc: "3 DMG a todas las unidades rivales y +4 Veneno al Heroe rival.",
-    effects: { damageAllUnitsOnly: 3, poisonEnemy: 4 }
+    shortTag: "3 DMG A TODOS + 2 VENENO",
+    desc: "3 DMG a todas las unidades rivales y +2 Veneno al Heroe rival.",
+    effects: { damageAllUnitsOnly: 3, poisonEnemy: 2 }
   },
 
   // ================= SPRAY CASTERS: THE SUGAR RIOT (9 CARTAS - TEMPO, STUN & CURACION POP) =================
@@ -2081,13 +2081,13 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/sugar_skate_elf.png",
     cost: 1,
     goldCost: 2,
-    atk: 3,
-    hp: 2,
+    atk: 4,
+    hp: 3,
     guard: false,
     haste: true,
     cute: true,
-    shortTag: "3/2 PRISA CUTE",
-    desc: "[PRISA] [CUTE] 3/2. Rapida y fragil; cura +1 HP a un aliado."
+    shortTag: "4/3 PRISA CUTE",
+    desc: "[PRISA] [CUTE] 4/3. Rapida y fragil; cura +1 HP a un aliado."
   },
   {
     id: "sugar_panda_punk",
@@ -2098,13 +2098,13 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/sugar_panda_punk.png",
     cost: 2,
     goldCost: 3,
-    atk: 4,
-    hp: 4,
+    atk: 5,
+    hp: 5,
     guard: false,
     haste: false,
     cute: true,
-    shortTag: "4/4 CUTE PEGATINAS",
-    desc: "[CUTE] 4/4. Anarquia pop con parches de estrellas y spray neon."
+    shortTag: "5/5 CUTE PEGATINAS",
+    desc: "[CUTE] 5/5. Anarquia pop con parches de estrellas y spray neon."
   },
   {
     id: "sugar_pop_android",
@@ -2115,13 +2115,13 @@ window.CUSTOM_CARDS = [
     art: "assets/spraycasters/cards/sugar_pop_android.png",
     cost: 3,
     goldCost: 5,
-    atk: 5,
-    hp: 5,
+    atk: 6,
+    hp: 6,
     guard: false,
     haste: true,
     cute: true,
-    shortTag: "5/5 PRISA CUTE",
-    desc: "[PRISA] [CUTE] 5/5. Androide rebelde cubierto de pegatinas brillantes."
+    shortTag: "6/6 PRISA CUTE",
+    desc: "[PRISA] [CUTE] 6/6. Androide rebelde cubierto de pegatinas brillantes."
   },
   {
     id: "sugar_neon_skates",
@@ -2159,9 +2159,9 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     duration: 5,
-    effects: { heal: 3, draw: 1 },
-    shortTag: "5T: +3 HP +1 CARTA",
-    desc: "[RELIQUIA 5T] Cada turno: curas +3 HP y robas 1 carta."
+    effects: { heal: 3, draw: 1, damageEnemyHero: 2 },
+    shortTag: "5T: 2 DMG +3 HP +1 CARTA",
+    desc: "[RELIQUIA 5T] Cada turno: 2 DMG al rival, curas +3 HP y robas 1 carta."
   },
   {
     id: "sugar_dazzle_flash",
@@ -2173,9 +2173,9 @@ window.CUSTOM_CARDS = [
     cost: 1,
     goldCost: 3,
     vfxType: "beam",
-    shortTag: "3 DMG + ATURDIR",
-    desc: "[DAZZLE] 3 DMG y ATURDE a una unidad rival durante 1 turno.",
-    effects: { damageEnemyUnitOrHero: 3, stunEnemyUnit: true }
+    shortTag: "5 DMG + ATURDIR",
+    desc: "[DAZZLE] 5 DMG y ATURDE a una unidad rival durante 1 turno.",
+    effects: { damageEnemyUnitOrHero: 5, stunEnemyUnit: true }
   },
   {
     id: "sugar_bounce_spring",
@@ -2201,8 +2201,8 @@ window.CUSTOM_CARDS = [
     cost: 2,
     goldCost: 4,
     vfxType: "meteor",
-    shortTag: "ATURDE A TODOS + 2 DMG",
-    desc: "[DAZZLE] 2 DMG y ATURDE a todas las unidades rivales.",
-    effects: { damageAllUnitsOnly: 2, stunAllEnemies: true }
+    shortTag: "ATURDE A TODOS + 5 DMG",
+    desc: "[DAZZLE] 5 DMG y ATURDE a todas las unidades rivales.",
+    effects: { damageAllUnitsOnly: 5, stunAllEnemies: true }
   }
 ];
